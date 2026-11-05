@@ -51,7 +51,7 @@
   .countdown small { display: block; font-size: .75rem; font-weight: 500; color: var(--muted); }
   .sub { grid-column: 2 / 4; color: var(--muted); font-size: .85rem; }
   .cancelled .dep { text-decoration: line-through; color: var(--bad); }
-  .cancel-tag { color: var(--bad); font-weight: 700; }
+  .cancel-tag { color: var(--bad); font-weight: 700; margin-left: 6px; }
   .remark { grid-column: 1 / 4; font-size: .8rem; color: var(--late); }
   .msg { color: var(--muted); padding: 10px 0; }
   .err { color: var(--bad); }
@@ -82,6 +82,22 @@
   body.widget .card { margin-bottom: 0; border-radius: 12px; padding: 10px 12px; }
   body.widget .dep { font-size: 1.3rem; }
   body.widget .conn { padding: 8px 0; }
+  :root[data-theme=dark] { --bg: #0b1220; --card: #141d2e; --text: #e5e7eb; --muted: #94a3b8;
+      --line: #243047; --accent: #34d399; --late: #fb923c; --ok: #4ade80; --bad: #f87171; }
+  :root[data-theme=light] { --bg: #f3f5f8; --card: #ffffff; --text: #111827; --muted: #6b7280;
+      --line: #e5e7eb; --late: #c2410c; --ok: #15803d; --bad: #b91c1c; }
+  body.transparent, body.transparent .card { background: transparent; border: 0; }
+  /* Mini-Widget: eine Zeile pro Verbindung, groß lesbar */
+  body.mini { padding: 4px 6px; }
+  body.mini .card { padding: 6px 8px; }
+  body.mini .route-title { font-size: .85rem; color: var(--muted); font-weight: 600; }
+  body.mini .footer { margin-top: 2px; }
+  body.mini .meta { font-size: .7rem; }
+  .mini-row { display: flex; align-items: baseline; gap: 8px; padding: 4px 0; font-variant-numeric: tabular-nums; }
+  .mini-row .dep { font-size: 1.35rem; font-weight: 750; }
+  .mini-row .delay { margin-left: 0; }
+  .mini-row .countdown { margin-left: auto; font-size: 1.2rem; }
+  .mini-row.cancelled .dep { text-decoration: line-through; color: var(--bad); }
 </style>
 </head>
 <body>
@@ -150,8 +166,8 @@ const params = new URLSearchParams(location.search);
 let urlRoute = null;
 if (params.get('from') && params.get('to')) {
   urlRoute = {
-    from: { id: params.get('from'), name: params.get('fromName') || params.get('from') },
-    to: { id: params.get('to'), name: params.get('toName') || params.get('to') },
+    from: stationParam(params.get('from'), params.get('fromName')),
+    to: stationParam(params.get('to'), params.get('toName')),
     count: clampInt(params.get('n'), 1, 6, 2),
     offset: clampInt(params.get('offset'), 0, 120, 0),
     onlySbahn: params.get('sbahn') !== '0',
@@ -159,7 +175,23 @@ if (params.get('from') && params.get('to')) {
   };
 }
 if (params.get('api')) state.api = params.get('api');
-if (params.has('widget')) document.body.classList.add('widget');
+const widgetMode = params.get('widget');
+if (widgetMode !== null) document.body.classList.add('widget');
+if (widgetMode === 'mini') document.body.classList.add('mini');
+if (params.get('bg') === 'transparent') document.body.classList.add('transparent');
+if (params.get('theme') === 'dark' || params.get('theme') === 'light') document.documentElement.dataset.theme = params.get('theme');
+
+// Standard-Strecke, falls noch nichts gespeichert ist
+const DEFAULT_ROUTE = {
+  from: { name: 'Stuttgart Feuersee' }, to: { name: 'Stuttgart-Weilimdorf' },
+  count: 2, offset: 0, onlySbahn: true, directOnly: true,
+};
+if (!state.routes.length && !urlRoute) { state.routes.push(structuredClone(DEFAULT_ROUTE)); state.active = 0; }
+
+// "from=8000096" ist eine Stations-ID, "from=Stuttgart Feuersee" ein Name (wird per Suche aufgelöst)
+function stationParam(v, name) {
+  return /^\d+$/.test(v) ? { id: v, name: name || v } : { name: name || v };
+}
 
 function clampInt(v, min, max, def) {
   const n = parseInt(v, 10);
@@ -193,7 +225,21 @@ function searchStations(q) {
 
 const ALL_PRODUCTS = ['nationalExpress','national','regionalExpress','regional','suburban','bus','ferry','subway','tram','taxi'];
 
+async function resolveStation(st) {
+  if (st.id) return st;
+  const cacheKey = 'sbahn-station:' + st.name.toLowerCase();
+  try { const c = localStorage.getItem(cacheKey); if (c) { st.id = c; return st; } } catch {}
+  const res = await searchStations(st.name);
+  const hit = res.find(s => s.type === 'stop' || s.type === 'station');
+  if (!hit) throw new Error('Station nicht gefunden: ' + st.name);
+  st.id = hit.id;
+  try { localStorage.setItem(cacheKey, hit.id); } catch {}
+  return st;
+}
+
 async function fetchJourneys(route) {
+  await resolveStation(route.from); await resolveStation(route.to);
+  if (!urlRoute) saveState();
   const when = new Date(Date.now() + (route.offset || 0) * 60000);
   const q = {
     from: route.from.id, to: route.to.id, departure: when.toISOString(),
@@ -261,6 +307,7 @@ function renderRoutesBar() {
   });
   bar.querySelector('button[data-new]').onclick = () => openSetup(null);
 }
+const shortName = (n) => document.body.classList.contains('widget') ? n.replace(/^Stuttgart[- ]/, '') : n;
 const short = (n) => n.length > 22 ? n.slice(0, 21) + '…' : n;
 
 function renderBoard() {
@@ -278,7 +325,7 @@ function renderBoard() {
   } else if (!current.journeys.length) {
     body = `<div class="msg">Keine passenden Verbindungen gefunden.</div>`;
   } else {
-    body = current.journeys.map(renderJourney).join('');
+    body = current.journeys.map(document.body.classList.contains('mini') ? renderMini : renderJourney).join('');
   }
   const status = current.loadedAt
     ? `Stand ${fmtTime(current.loadedAt.toISOString())}${current.error ? ' · <span class="err">Aktualisierung fehlgeschlagen</span>' : ''}${current.loading ? ' · lädt…' : ''}`
@@ -286,7 +333,7 @@ function renderBoard() {
   board.innerHTML = `
     <div class="card">
       <div class="route-head">
-        <div class="route-title">${esc(r.from.name)}<span class="arrow">→</span>${esc(r.to.name)}</div>
+        <div class="route-title">${esc(shortName(r.from.name))}<span class="arrow">→</span>${esc(shortName(r.to.name))}</div>
         <div class="row route-actions">
           <button class="icon" id="swapBtn" title="Richtung tauschen" aria-label="Richtung tauschen">⇅</button>
           ${urlRoute ? '' : '<button class="icon" id="editBtn" title="Bearbeiten" aria-label="Bearbeiten">✎</button>'}
@@ -302,12 +349,28 @@ function renderBoard() {
       </div>
     </div>`;
   $('reloadBtn').onclick = () => load();
+  board.querySelector('.card').onclick = (e) => { if (document.body.classList.contains('widget')) load(); };
   $('swapBtn').onclick = () => {
     const rr = activeRoute(); [rr.from, rr.to] = [rr.to, rr.from];
     if (!urlRoute) saveState(); renderRoutesBar(); load();
   };
   if ($('editBtn')) $('editBtn').onclick = () => openSetup(state.active);
   if ($('linkBtn')) $('linkBtn').onclick = () => copyWidgetLink(r);
+}
+
+function renderMini(j) {
+  const d = depOf(j);
+  const legs = realLegs(j);
+  const cancelled = j.legs.some(l => l.cancelled);
+  const mins = Math.round((new Date(d.actual || d.planned) - Date.now()) / 60000);
+  const delayMin = d.delay != null ? Math.round(d.delay / 60) : null;
+  const status = cancelled ? '<span class="cancel-tag">fällt aus</span>'
+    : delayMin > 0 ? `<span class="delay">+${delayMin}</span>` : '';
+  return `<div class="mini-row ${cancelled ? 'cancelled' : ''}">
+      <span class="line">${esc(legs[0]?.line?.name || '?')}</span>
+      <span class="dep">${fmtTime(d.actual || d.planned)}</span>${status}
+      <span class="countdown">${cancelled ? '' : mins <= 0 ? 'jetzt' : mins + '′'}</span>
+    </div>`;
 }
 
 function renderJourney(j) {
