@@ -1,0 +1,1657 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Salzwind</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: the sea chart fills the screen; instruments float at its edges like tools on a captain's chart table. */
+:root{
+  --ink:#0d1820;
+  --panel:rgba(13,24,32,.88);
+  --panel-2:rgba(255,244,220,.06);
+  --line:rgba(239,226,196,.14);
+  --paper:#efe6d2;
+  --muted:#9fb0ae;
+  --brass:#e3a948;
+  --brass-ink:#2a1c08;
+  --good:#86c98f;
+  --warn:#e9c55c;
+  --bad:#e57a62;
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --buildH:122px;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--ink);color:var(--paper);font-family:var(--f-body);font-size:14px;overflow:hidden;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+button{font:inherit;color:inherit}
+button:focus-visible,summary:focus-visible,input:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.ico{flex:none;display:block}
+#world{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:default}
+#world.tool{cursor:crosshair}
+#world.panning{cursor:grabbing}
+
+/* top instrument bar */
+#top{position:fixed;left:0;right:0;top:0;z-index:5;display:flex;align-items:center;gap:12px;
+  padding-block:calc(env(safe-area-inset-top,0px) + 8px) 8px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:linear-gradient(180deg,rgba(9,18,25,.95),rgba(9,18,25,.82));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line)}
+.brand{font-family:var(--f-display);font-weight:800;font-size:20px;letter-spacing:-.01em;color:var(--brass);white-space:nowrap}
+.stat{display:flex;align-items:center;gap:6px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.stat b{font-weight:700;font-size:15px}
+.stat small{color:var(--muted);font-size:12px}
+.stat small.neg{color:var(--bad)}
+.goods{flex:1;min-width:0;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding-block:2px}
+.goods::-webkit-scrollbar{display:none}
+.good{display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:7px;border:1px solid transparent;background:var(--panel-2);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.good:hover{border-color:var(--line)}
+.good.zero{opacity:.45}
+.good.full span{color:var(--warn)}
+.ctrls{display:flex;align-items:center;gap:8px}
+.chip{border:1px solid var(--line);background:var(--panel-2);border-radius:8px;padding:6px 10px;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap}
+.chip:hover{border-color:rgba(239,226,196,.3)}
+.chip.live{background:var(--brass);color:var(--brass-ink);border-color:var(--brass);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 5px rgba(227,169,72,.18)}}
+.speed{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.speed button{border:0;background:transparent;padding:6px 9px;font-weight:700;font-size:12px;cursor:pointer;font-variant-numeric:tabular-nums;min-width:32px}
+.speed button.on{background:var(--brass);color:var(--brass-ink)}
+
+/* goals */
+#goals{position:fixed;z-index:4;left:max(16px,env(safe-area-inset-left,0px));top:calc(env(safe-area-inset-top,0px) + 66px);width:min(280px,calc(100% - 32px));
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#goals h3{margin:0 0 8px;font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;cursor:pointer}
+#goals h3 span{font-variant-numeric:tabular-nums;letter-spacing:0}
+#goals ol{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+#goals li{display:grid;grid-template-columns:16px 1fr;gap:8px;line-height:1.35;font-size:13px}
+#goals li .dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--brass);margin-top:3px}
+#goals li.next{color:var(--muted)}
+#goals li.next .dot{border-color:var(--line)}
+#goals li p{margin:2px 0 0;color:var(--muted);font-size:12px}
+#goals.min ol li:not(:first-child){display:none}
+#goals.min li p{display:none}
+
+/* side panel */
+#panel{position:fixed;z-index:6;right:max(16px,env(safe-area-inset-right,0px));top:calc(env(safe-area-inset-top,0px) + 66px);
+  width:min(320px,calc(100% - 32px));max-height:calc(100% - 66px - var(--buildH) - 150px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px 16px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 18px 50px rgba(0,0,0,.35)}
+.ph{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;margin-bottom:12px}
+.ph canvas{border-radius:10px;background:rgba(255,255,255,.04)}
+.ph h2{margin:0;font-family:var(--f-display);font-size:19px;font-weight:700;line-height:1.15;text-wrap:balance}
+.ph .sub{margin:3px 0 0;font-size:12.5px;color:var(--muted)}
+.x{border:0;background:var(--panel-2);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;line-height:1}
+.sec{border-top:1px solid var(--line);padding-top:10px;margin-top:10px;display:grid;gap:8px}
+.sec h4{margin:0;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px}
+.row .l{display:flex;align-items:center;gap:7px;min-width:0}
+.row .v{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.bar{height:6px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--brass);border-radius:4px;transition:width .25s linear}
+.bar.g i{background:var(--good)}.bar.w i{background:var(--warn)}.bar.b i{background:var(--bad)}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--panel-2)}
+.pill.ok{color:var(--good)}.pill.warn{color:var(--warn)}.pill.bad{color:var(--bad)}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--panel-2);border-radius:9px;padding:8px 12px;font-weight:600;cursor:pointer;font-size:13px}
+.btn:hover{border-color:rgba(239,226,196,.35)}
+.btn.primary{background:var(--brass);color:var(--brass-ink);border-color:var(--brass)}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.check{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
+.check input{accent-color:var(--brass);width:16px;height:16px}
+.req{display:grid;grid-template-columns:14px 1fr;gap:6px;font-size:12.5px;align-items:start}
+.req b{font-weight:700}
+.req .ok{color:var(--good)}.req .no{color:var(--bad)}
+.note{font-size:12.5px;color:var(--muted);line-height:1.45;margin:0}
+table.tt{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+.tt th{text-align:left;font-weight:600;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:4px 0}
+.tt td{padding:5px 0;border-top:1px solid var(--line)}
+.tt td.n,.tt th.n{text-align:right}
+.tt .gname{display:flex;align-items:center;gap:6px}
+.tt .pos{color:var(--good)}.tt .neg{color:var(--bad)}
+.tt button{border:1px solid var(--line);background:var(--panel-2);border-radius:6px;padding:3px 7px;font-size:12px;font-weight:600;cursor:pointer;font-variant-numeric:tabular-nums}
+.tt button:disabled{opacity:.35;cursor:not-allowed}
+
+/* build bar */
+#build{position:fixed;z-index:5;left:0;right:0;bottom:0;
+  padding-block:8px calc(env(safe-area-inset-bottom,0px) + 10px);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:linear-gradient(0deg,rgba(9,18,25,.96),rgba(9,18,25,.84));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+.tabs{display:flex;gap:4px;margin-bottom:6px;align-items:center}
+.tab{border:0;background:transparent;padding:4px 10px;border-radius:7px;font-family:var(--f-display);font-weight:700;font-size:13px;color:var(--muted);cursor:pointer}
+.tab[aria-selected="true"]{color:var(--paper);background:var(--panel-2)}
+.tabs .sp{flex:1}
+.tools{display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}
+.tool{flex:none;width:76px;border:1px solid transparent;background:var(--panel-2);border-radius:10px;padding:4px 2px 6px;cursor:pointer;display:grid;justify-items:center;gap:2px}
+.tool span{font-size:11px;font-weight:600;line-height:1.15;text-align:center;max-width:72px}
+.tool:hover{border-color:var(--line)}
+.tool.on{border-color:var(--brass);background:rgba(227,169,72,.12)}
+.tool.locked{opacity:.38}
+.tool.poor span{color:var(--bad)}
+#hint{position:fixed;z-index:5;left:50%;transform:translateX(-50%);bottom:calc(var(--buildH) + env(safe-area-inset-bottom,0px) + 10px);
+  max-width:min(620px,calc(100% - 32px));background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;line-height:1.4;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);pointer-events:none}
+#hint b{font-family:var(--f-display);font-weight:700}
+.cost{display:inline-flex;gap:8px;flex-wrap:wrap;vertical-align:middle;margin-left:6px}
+.cost i{font-style:normal;display:inline-flex;align-items:center;gap:3px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--paper)}
+.cost i.no{color:var(--bad)}
+body.demo #top,body.demo #build,body.demo #mini,body.demo #goals,body.demo #hint,body.demo #panel{display:none}
+#hint p{margin:3px 0 0;color:var(--muted)}
+
+#mini{position:fixed;z-index:4;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(var(--buildH) + env(safe-area-inset-bottom,0px) + 12px);
+  width:200px;height:110px;border-radius:12px;border:1px solid var(--line);background:rgba(13,24,32,.75);cursor:pointer;touch-action:none}
+
+#toasts{position:fixed;z-index:8;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(var(--buildH) + env(safe-area-inset-bottom,0px) + 12px);display:grid;gap:6px;max-width:min(380px,calc(100% - 32px));pointer-events:none}
+.toast{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--brass);border-radius:9px;padding:8px 12px;font-size:13px;line-height:1.35;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);animation:tin .25s ease-out}
+.toast.warn{border-left-color:var(--bad)}
+.toast.good{border-left-color:var(--good)}
+@keyframes tin{from{opacity:0;transform:translateY(6px)}}
+
+/* menu overlay */
+#overlay{position:fixed;inset:0;z-index:20;display:flex;align-items:center;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:calc(env(safe-area-inset-top,0px) + 16px) calc(env(safe-area-inset-bottom,0px) + 16px);
+  background:linear-gradient(90deg,rgba(8,16,22,.92) 0%,rgba(8,16,22,.72) 45%,rgba(8,16,22,.15) 100%);overflow:auto}
+.card{max-width:520px;margin-left:clamp(0px,6vw,90px);display:grid;gap:16px}
+.eyebrow{margin:0;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);font-weight:600}
+.card h1{margin:0;font-family:var(--f-display);font-weight:800;font-size:clamp(56px,11vw,104px);line-height:.9;letter-spacing:-.035em}
+.lede{margin:0;font-size:16px;line-height:1.55;color:#d9d2c0;max-width:46ch}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.actions .btn{padding:11px 18px;font-size:15px}
+details{border-top:1px solid var(--line);padding-top:12px}
+summary{cursor:pointer;font-weight:600}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:12px 0 0;font-size:13px;line-height:1.4}
+dt{color:var(--brass);font-weight:600;white-space:nowrap}
+dd{margin:0;color:#d9d2c0}
+.fine{margin:0;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.chain{display:grid;gap:6px;margin-top:12px;font-size:13px;color:#d9d2c0}
+.chain div{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+
+@media (max-width:760px){
+  :root{--buildH:116px}
+  .brand{display:none}
+  #top{gap:8px;flex-wrap:wrap;row-gap:6px}
+  .goods{order:5;flex-basis:100%}
+  #goals{top:calc(env(safe-area-inset-top,0px) + 106px)}
+  #toasts{right:max(16px,env(safe-area-inset-right,0px));max-width:none}
+  .toast:nth-last-child(n+3){display:none}
+  .stat small{display:none}
+  #mini{width:150px;height:84px}
+  #goals{padding:10px 12px}
+  #panel{left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));width:auto;top:auto;
+    bottom:calc(var(--buildH) + env(safe-area-inset-bottom,0px) + 10px);max-height:48%}
+  #hint{display:none}
+  .speed button{padding:6px 6px;min-width:26px}
+  .ctrls{gap:5px}
+}
+@media (max-width:520px){
+  #mini{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .chip.live,.toast{animation:none}
+  .bar i{transition:none}
+}
+</style>
+
+<canvas id="world" aria-label="Spielkarte des Archipels"></canvas>
+
+<header id="top">
+  <div class="brand">Salzwind</div>
+  <div class="stat" title="Gold · Bilanz pro Minute"><span id="i-gold"></span><b id="v-gold">0</b><small id="v-inc"></small></div>
+  <div class="stat" title="Einwohner"><span id="i-pop"></span><b id="v-pop">0</b></div>
+  <div class="goods" id="goods" aria-label="Lagerbestand"></div>
+  <div class="ctrls">
+    <button class="chip" id="b-trade" type="button">Handel</button>
+    <div class="speed" role="group" aria-label="Spieltempo">
+      <button type="button" data-sp="0" title="Pause (Leertaste)">II</button>
+      <button type="button" data-sp="1" title="Normal (1)">1×</button>
+      <button type="button" data-sp="2" title="Schnell (2)">2×</button>
+      <button type="button" data-sp="4" title="Sehr schnell (3)">4×</button>
+    </div>
+    <button class="chip" id="b-menu" type="button">Menü</button>
+  </div>
+</header>
+
+<aside id="goals" aria-live="polite"></aside>
+<aside id="panel" hidden></aside>
+<div id="hint" hidden></div>
+<canvas id="mini" aria-label="Übersichtskarte"></canvas>
+<div id="toasts" aria-live="polite"></div>
+
+<nav id="build" aria-label="Bauen">
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <div class="tools" id="tools"></div>
+</nav>
+
+<div id="overlay">
+  <div class="card" id="card"></div>
+</div>
+
+<script>
+'use strict';
+(() => {
+// ============================================================ constants
+const N = 80, HW = 32, HH = 16;
+const $ = s => document.querySelector(s);
+const D4 = [[1,0],[-1,0],[0,1],[0,-1]];
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fmt = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 });
+const SAVE_KEY = 'salzwind-save-v1';
+
+// ============================================================ rng & noise
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function hash2(x,y,s){let h=(Math.imul(x|0,374761393)+Math.imul(y|0,668265263)+Math.imul(s|0,1442695041))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return (h>>>0)/4294967296;}
+function vnoise(x,y,s){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi;const u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
+  const a=hash2(xi,yi,s),b=hash2(xi+1,yi,s),c=hash2(xi,yi+1,s),d=hash2(xi+1,yi+1,s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;}
+function fbm(x,y,s){let t=0,amp=.5,f=1;for(let i=0;i<4;i++){t+=vnoise(x*f,y*f,s+i*17)*amp;f*=2;amp*=.5;}return t/.9375;}
+
+// ============================================================ game data
+const GOODS = {
+  holz:{n:'Holz',p:6}, werkzeug:{n:'Werkzeug',p:30}, stein:{n:'Stein',p:12}, fisch:{n:'Fisch',p:8},
+  wolle:{n:'Wolle',p:10}, stoff:{n:'Stoff',p:32}, getreide:{n:'Getreide',p:6}, mehl:{n:'Mehl',p:11},
+  brot:{n:'Brot',p:20}, erz:{n:'Erz',p:15}, tee:{n:'Tee',p:38},
+};
+const GK = Object.keys(GOODS);
+
+const ICON = {
+  gold:'<circle cx="8" cy="8" r="6.5" fill="#e3a948"/><circle cx="8" cy="8" r="4" fill="none" stroke="#9c6a1f" stroke-width="1.3"/>',
+  pop:'<circle cx="8" cy="4.8" r="3" fill="#efe6d2"/><path d="M2.5 15c0-3.4 2.5-5.8 5.5-5.8s5.5 2.4 5.5 5.8z" fill="#efe6d2"/>',
+  holz:'<rect x="1.5" y="5" width="13" height="6.2" rx="3.1" fill="#a8743f"/><circle cx="11.6" cy="8.1" r="2.5" fill="#e2b77a"/><circle cx="11.6" cy="8.1" r="1" fill="#a8743f"/>',
+  werkzeug:'<path d="M3.5 13.5l6.5-6.5" stroke="#b07a42" stroke-width="2.6" stroke-linecap="round"/><path d="M7.4 3.2l5.4 5.4-2.2 2.2-5.4-5.4z" fill="#a9b6bf"/>',
+  stein:'<path d="M2 12.5l2-6.5 5-2 5 3-1 6.5-6 1z" fill="#a9a396"/><path d="M4 6l5-2 5 3-5 2.2z" fill="#d9d3c7"/>',
+  fisch:'<path d="M1.8 8c3-4.2 8.2-4.2 10.2 0-2 4.2-7.2 4.2-10.2 0z" fill="#72b8cd"/><path d="M11.8 8l3.4-3.2v6.4z" fill="#72b8cd"/><circle cx="5" cy="7.2" r=".95" fill="#0d1820"/>',
+  wolle:'<circle cx="8" cy="8" r="5.8" fill="#eee8d9"/><path d="M3.6 6c3 0 6 2 8.2 5M3.3 9.3c3-1 6 0 7.6 3.6M6 3.2c2 1.6 4 4 5.1 7.2" stroke="#b9b09a" fill="none" stroke-width=".9"/>',
+  stoff:'<path d="M2 4h10.2l2 2v6.4H4l-2-2z" fill="#d0718f"/><path d="M2 4v6.4l2 2V6z" fill="#9a4865"/>',
+  getreide:'<path d="M8 15V3" stroke="#c9a240" stroke-width="1.3"/><ellipse cx="6.1" cy="5" rx="1.5" ry="2.4" fill="#e6c45e"/><ellipse cx="9.9" cy="7" rx="1.5" ry="2.4" fill="#e6c45e"/><ellipse cx="6.1" cy="9.2" rx="1.5" ry="2.4" fill="#e6c45e"/>',
+  mehl:'<path d="M4 5.2c0-2.2 8-2.2 8 0l1.2 8c0 1.6-10.4 1.6-10.4 0z" fill="#f1ead8"/><path d="M5 4.6h6" stroke="#bfb59d" stroke-width="1.5"/>',
+  brot:'<ellipse cx="8" cy="9" rx="6.6" ry="4.3" fill="#c98b45"/><path d="M5 7l1.5 3M8 6.5l1.5 3M11 7l1.2 2.6" stroke="#f3cf95" stroke-width="1.1"/>',
+  erz:'<path d="M2 12.5l3-7.5 5-1.2 4.2 5.2-2 4.2z" fill="#6f5a50"/><circle cx="6.2" cy="8" r="1.4" fill="#e9814a"/><circle cx="10.1" cy="9.6" r="1.1" fill="#e9814a"/>',
+  tee:'<path d="M8 14.4C3 12.4 2 6 7 1.8c5 3.2 5 9.2 1 12.6z" fill="#7fae5c"/><path d="M8 14.4C7 9 7 6 7 1.8" stroke="#4f7a38" stroke-width="1" fill="none"/>',
+};
+const icon = (k, s=16) => `<svg class="ico" width="${s}" height="${s}" viewBox="0 0 16 16" aria-hidden="true">${ICON[k]}</svg>`;
+
+const TIERS = [
+  { n:'Pioniere', house:'Pionierhütte', max:3,  tax:1.5, needs:{fisch:.06}, svc:['markt'], up:{holz:2, werkzeug:1} },
+  { n:'Siedler',  house:'Siedlerhaus',  max:7,  tax:2.3, needs:{fisch:.05, stoff:.03}, svc:['markt','kapelle'], up:{holz:2, werkzeug:2, stein:4} },
+  { n:'Bürger',   house:'Bürgerhaus',   max:15, tax:3.5, needs:{fisch:.03, brot:.04, stoff:.04, tee:.03}, svc:['markt','kapelle','schule'], up:null },
+];
+const SVC_N = { markt:'Markt in Reichweite', kapelle:'Kapelle in Reichweite', schule:'Schule in Reichweite' };
+
+const B = {
+  strasse:{n:'Straße', s:1, cost:{gold:3}, up:0, desc:'Verbindet Betriebe mit Kontor oder Markthaus. Nur angeschlossene Betriebe liefern Waren ins Lager. Ziehen, um eine Strecke zu bauen.'},
+  haus:{n:'Wohnhaus', s:1, cost:{holz:3}, up:0, desc:'Hier ziehen Pioniere ein. Sind ihre Wünsche erfüllt, steigen sie zu Siedlern und Bürgern auf. Ziehen, um eine Fläche zu bebauen.'},
+  kontor:{n:'Kontor', s:2, cost:{gold:800, holz:10, werkzeug:5}, up:10, hub:true, influence:10, radius:8, desc:'Lager und Hafen einer Insel. Muss an der Küste stehen, höchstens 7 Felder von deinem Schiff entfernt. Dein erstes Kontor ist kostenlos.'},
+  markt:{n:'Markthaus', s:2, cost:{gold:200, holz:6, werkzeug:2}, up:12, hub:true, influence:7, radius:8, unlock:{pop:25}, desc:'Versorgt Häuser im Umkreis, erweitert das Baugebiet und nimmt wie das Kontor Waren an.'},
+  kapelle:{n:'Kapelle', s:1, cost:{gold:150, holz:4, werkzeug:1}, up:6, radius:7, svc:'kapelle', unlock:{pop:40}, desc:'Siedler wollen eine Kapelle in der Nähe. Pioniere steigen erst auf, wenn eine erreichbar ist.'},
+  schule:{n:'Schule', s:1, cost:{gold:400, holz:6, werkzeug:3, stein:6}, up:14, radius:8, svc:'schule', unlock:{t1:60}, desc:'Bürger schicken ihre Kinder zur Schule. Siedler steigen nur in ihrer Reichweite auf.'},
+  holzfaeller:{n:'Holzfäller', s:1, cost:{gold:50, holz:2}, up:3, out:'holz', time:12, desc:'Fällt Holz im Umkreis von 3 Feldern. Mit 8 Bäumen in Reichweite arbeitet er voll.'},
+  fischer:{n:'Fischerhütte', s:1, cost:{gold:80, holz:3}, up:4, out:'fisch', time:10, desc:'Muss direkt am Wasser stehen. Fisch ist das Grundnahrungsmittel.'},
+  steinbruch:{n:'Steinbruch', s:1, cost:{gold:150, holz:5, werkzeug:2}, up:6, out:'stein', time:16, unlock:{t1:20}, desc:'Muss an einen Berg grenzen.'},
+  erzmine:{n:'Erzmine', s:1, cost:{gold:250, holz:6, werkzeug:3}, up:10, out:'erz', time:20, unlock:{t1:40}, desc:'Braucht ein Erzvorkommen im angrenzenden Berg (rötlich gesprenkelt).'},
+  schaf:{n:'Schaffarm', s:2, cost:{gold:150, holz:4}, up:6, out:'wolle', time:14, unlock:{pop:40}, desc:'Liefert Wolle für die Weberei.'},
+  getreide:{n:'Getreidefarm', s:2, cost:{gold:120, holz:4}, up:5, out:'getreide', time:12, unlock:{t1:80}, desc:'Liefert Getreide für die Mühle.'},
+  tee:{n:'Teeplantage', s:2, cost:{gold:300, holz:6, werkzeug:2}, up:10, out:'tee', time:15, fert:'tee', unlock:{t1:100}, desc:'Gedeiht nur auf Inseln, die für Tee fruchtbar sind (gelbgrünes Gras, „Tee“ im Inselnamen).'},
+  weberei:{n:'Weberei', s:1, cost:{gold:200, holz:4, werkzeug:2}, up:8, in:{wolle:2}, out:'stoff', time:15, unlock:{pop:40}, desc:'Webt aus 2 Wolle 1 Stoff.'},
+  muehle:{n:'Mühle', s:1, cost:{gold:200, holz:6, werkzeug:2}, up:6, in:{getreide:2}, out:'mehl', time:12, unlock:{t1:80}, desc:'Mahlt aus 2 Getreide 1 Mehl.'},
+  baecker:{n:'Bäckerei', s:1, cost:{gold:250, holz:4, werkzeug:2, stein:4}, up:8, in:{mehl:1}, out:'brot', amt:2, time:15, unlock:{t1:80}, desc:'Backt aus 1 Mehl 2 Brot.'},
+  schmiede:{n:'Werkzeugschmiede', s:1, cost:{gold:300, holz:4, stein:4}, up:12, in:{erz:1, holz:1}, out:'werkzeug', time:20, unlock:{t1:40}, desc:'Schmiedet aus 1 Erz und 1 Holz 1 Werkzeug.'},
+};
+const CATS = [
+  { n:'Siedlung', items:['strasse','haus','kontor','markt','kapelle','schule'] },
+  { n:'Rohstoffe', items:['holzfaeller','fischer','steinbruch','erzmine','schaf','getreide','tee'] },
+  { n:'Werkstätten', items:['weberei','muehle','baecker','schmiede'] },
+];
+const PAINT = new Set(['strasse','haus','abriss']);
+
+const GOALS = [
+  { t:'Gründe ein Kontor', h:'Wähle unten „Kontor“ und setze es an die Küste neben dein Schiff.', ok:()=>cnt('kontor')>=1, r:0 },
+  { t:'Baue zwei Holzfäller am Waldrand', h:'Je mehr Bäume im Umkreis, desto schneller.', ok:()=>cnt('holzfaeller')>=2, r:100 },
+  { t:'Baue eine Fischerhütte am Wasser', h:'Fisch ernährt deine Pioniere.', ok:()=>cnt('fischer')>=1, r:100 },
+  { t:'Verbinde alle Betriebe per Straße', h:'Straßen müssen bis ans Kontor oder ein Markthaus reichen.', ok:()=>{const p=G.buildings.filter(b=>B[b.t].out);return p.length>=3&&p.every(b=>b.conn);}, r:150 },
+  { t:'Errichte 8 Wohnhäuser', h:'Wohnhäuser im Umkreis des Kontors werden vom Markt versorgt.', ok:()=>cnt('haus')>=8, r:150 },
+  { t:'Erreiche 40 Einwohner', h:'Zufriedene Pioniere ziehen nach.', ok:()=>G.pop>=40, r:200 },
+  { t:'Baue eine Kapelle', h:'Mit Kapelle in Reichweite steigen Pioniere zu Siedlern auf.', ok:()=>cnt('kapelle')>=1, r:150 },
+  { t:'Stelle Stoff her', h:'Schaffarm liefert Wolle, die Weberei macht Stoff daraus.', ok:()=>cnt('schaf')>=1&&cnt('weberei')>=1, r:200 },
+  { t:'Erreiche 40 Siedler', h:'Siedler brauchen Fisch, Stoff, Markt und Kapelle.', ok:()=>G.popT[1]+G.popT[2]>=40, r:250 },
+  { t:'Gründe ein Kontor auf einer zweiten Insel', h:'Segle zu einer Insel mit Erz oder Tee.', ok:()=>cnt('kontor')>=2, r:300 },
+  { t:'Stelle eigenes Werkzeug her', h:'Erzmine und Werkzeugschmiede, verbunden mit einem Kontor.', ok:()=>cnt('erzmine')>=1&&cnt('schmiede')>=1, r:300 },
+  { t:'Erreiche 50 Bürger', h:'Bürger wollen Brot, Tee und eine Schule.', ok:()=>G.popT[2]>=50, r:400 },
+  { t:'Lass deine Kolonie auf 600 Einwohner wachsen', h:'Das große Ziel. Danach kannst du weiterspielen.', ok:()=>G.pop>=600, r:0, final:true },
+];
+const ISLE_NAMES = ['Möwenfels','Sturmhuk','Tangholm','Bernsteinkap','Nebelau','Kaperriff','Muschelgrund','Ostwacht','Salzhorn','Lotsenholm','Krähennest','Windbruch','Ankergrund','Robbenwatt'];
+
+// ============================================================ map generation
+function genMap(seed){
+  const rnd = mulberry32(seed);
+  const L = new Uint8Array(N*N);
+  const centers = [{ x:N*.5+(rnd()-.5)*8, y:N*.5+(rnd()-.5)*8, r:12.5 }];
+  for (let k=0; k<800 && centers.length<11; k++){
+    const r = 4.8+rnd()*7.2, x = 5+r+rnd()*(N-10-2*r), y = 5+r+rnd()*(N-10-2*r);
+    if (centers.every(c => Math.hypot(c.x-x,c.y-y) > c.r+r+4.5)) centers.push({x,y,r});
+  }
+  for (let y=0;y<N;y++) for (let x=0;x<N;x++){
+    let v=-1;
+    for (const c of centers){ v = Math.max(v, 1-Math.hypot(x-c.x,y-c.y)/c.r); }
+    v += (fbm(x*.14,y*.14,seed)-.5)*.75;
+    if (v>.12 && x>2 && y>2 && x<N-3 && y<N-3) L[y*N+x]=1;
+  }
+  // components
+  const isl = new Int16Array(N*N).fill(-1), seen = new Uint8Array(N*N), comps = [];
+  for (let i=0;i<N*N;i++){
+    if (!L[i] || seen[i]) continue;
+    const tiles=[], st=[i]; seen[i]=1;
+    while (st.length){ const j=st.pop(); tiles.push(j); const x=j%N, y=(j/N)|0;
+      for (const [dx,dy] of D4){ const nx=x+dx, ny=y+dy; if(nx<0||ny<0||nx>=N||ny>=N) continue; const q=ny*N+nx; if(L[q]&&!seen[q]){seen[q]=1;st.push(q);} } }
+    if (tiles.length<16){ for(const j of tiles) L[j]=0; continue; }
+    const id=comps.length; let sx=0, sy=0;
+    for (const j of tiles){ isl[j]=id; sx+=j%N; sy+=(j/N)|0; }
+    comps.push({ id, tiles, cx:sx/tiles.length+.5, cy:sy/tiles.length+.5 });
+  }
+  // distances
+  const dist = new Uint8Array(N*N), wd = new Uint8Array(N*N);
+  bfsDist(L, 1, dist); bfsDist(L, 0, wd);
+  // home island = the one closest to first centre
+  let home = comps[0], hd = 1e9;
+  for (const c of comps){ const d=Math.hypot(c.cx-centers[0].x,c.cy-centers[0].y) - c.tiles.length*.02; if(d<hd){hd=d;home=c;} }
+  const names = ISLE_NAMES.slice().sort(()=>rnd()-.5);
+  const others = comps.filter(c=>c!==home).sort(()=>rnd()-.5);
+  comps.forEach((c,i)=>{ c.name=names[i%names.length]; c.home=(c===home); c.tee=false; c.ore=false; c.mount=false; });
+  home.mount = true;
+  others.forEach((c,i)=>{ c.tee = i%2===0 || rnd()<.2; c.ore = i%2===1 || rnd()<.25; c.mount = c.ore || (c.tiles.length>50 && rnd()<.55); });
+  if (others.length===1){ const o=others[0]; o.tee=o.ore=o.mount=true; }
+  const T = new Uint8Array(N*N), ore = new Uint8Array(N*N), tree = new Uint8Array(N*N), shade = new Uint8Array(N*N);
+  // mountains
+  for (const c of comps){
+    if (!c.mount) continue;
+    const inner = c.tiles.filter(j=>dist[j]>=2).sort((a,b)=>dist[b]-dist[a] || hash2(a,b,seed)-.5);
+    if (!inner.length) { c.mount=false; c.ore=false; continue; }
+    const want = Math.max(3, Math.round(c.tiles.length*.07)), m = new Set([inner[0]]), front=[inner[0]];
+    while (m.size<want && front.length){
+      const k = Math.floor(rnd()*front.length), j=front[k], x=j%N, y=(j/N)|0; let grew=false;
+      for (const [dx,dy] of D4.slice().sort(()=>rnd()-.5)){ const q=(y+dy)*N+x+dx; if(L[q]&&dist[q]>=2&&!m.has(q)){ m.add(q); front.push(q); grew=true; break; } }
+      if (!grew) front.splice(k,1);
+    }
+    for (const j of m) T[j]=5;
+    if (c.ore){
+      const edge=[...m].filter(j=>{const x=j%N,y=(j/N)|0;return D4.some(([dx,dy])=>{const q=(y+dy)*N+x+dx;return L[q]&&!m.has(q);});}).sort(()=>rnd()-.5);
+      const n = Math.max(2, Math.ceil(m.size*.4));
+      for (let k=0;k<Math.min(n,edge.length);k++) ore[edge[k]]=1;
+    }
+  }
+  for (let i=0;i<N*N;i++){
+    const x=i%N, y=(i/N)|0;
+    shade[i] = Math.floor(hash2(x,y,seed+5)*4);
+    if (!L[i]){ T[i] = wd[i]<=1 ? 1 : wd[i]===2 ? 2 : 0; continue; }
+    if (T[i]===5) continue;
+    T[i] = dist[i]<=1 ? 3 : 4;
+    if (T[i]===4 && fbm(x*.21,y*.21,seed+99)>.5) tree[i] = 1+Math.floor(hash2(x,y,seed+3)*200);
+  }
+  return { seed, T, isl, ore, tree, shade, dist, wd, comps, home:home.id };
+}
+function bfsDist(L, landVal, out){
+  // distance (4-neigh) of tiles with L==landVal to nearest tile with L!=landVal
+  out.fill(255); const q=[];
+  for (let i=0;i<N*N;i++) if (L[i]!==landVal){ out[i]=0; q.push(i); }
+  for (let h=0; h<q.length; h++){ const j=q[h], x=j%N, y=(j/N)|0;
+    for (const [dx,dy] of D4){ const nx=x+dx, ny=y+dy; if(nx<0||ny<0||nx>=N||ny>=N) continue; const k=ny*N+nx; if(out[k]===255){ out[k]=Math.min(254,out[j]+1); q.push(k);} } }
+}
+
+// ============================================================ state
+let G = null;
+let own, covM, covK, covS, conn;
+const sel = { kind:null, id:0 };
+let tool = null;
+const cam = { x:0, y:N*HH, z:1 };
+
+function freshGrids(){ own=new Uint8Array(N*N); covM=new Uint8Array(N*N); covK=new Uint8Array(N*N); covS=new Uint8Array(N*N); conn=new Uint8Array(N*N); }
+function newState(seed, demo){
+  const map = genMap(seed);
+  const g = {
+    seed, map, demo:!!demo, t:0, gold:2500, stock:{}, sup:{}, made:{}, founded:false, speed:1, lastSpeed:1,
+    buildings:[], byId:new Map(), nextId:1, road:new Uint8Array(N*N), occ:new Int32Array(N*N), cut:[],
+    ship:null, trader:{ st:'away', tm:75, x:0, y:0, path:[], ang:0 }, goal:0, unlocked:new Set(), allowUp:true,
+    pop:0, popT:[0,0,0], taxRate:0, upkeepRate:0, cap:60, cnt:{}, hubIds:new Set(), dirty:true, terrDirty:true,
+    tierSeen:[true,false,false], warnT:{}, won:false, secAcc:0, anim:0,
+  };
+  for (const k of GK){ g.stock[k]=0; g.sup[k]=1; }
+  g.stock.holz=45; g.stock.werkzeug=22; g.stock.fisch=15;
+  // ship near home
+  const home = map.comps[map.home], hs = new Uint8Array(N*N); for (const j of home.tiles) hs[j]=1;
+  const hd = new Uint8Array(N*N); bfsDist(hs, 0, hd);
+  let cand = [];
+  for (let i=0;i<N*N;i++) if (map.T[i]<=2 && hd[i]>=3 && hd[i]<=4) cand.push(i);
+  if (!cand.length) for (let i=0;i<N*N;i++) if (map.T[i]<=2) { cand.push(i); break; }
+  const pick = cand[Math.floor(mulberry32(seed+11)()*cand.length)];
+  g.ship = { x:pick%N+.5, y:((pick/N)|0)+.5, path:[], ang:.8, da:.8 };
+  return g;
+}
+const cnt = t => (G.cnt[t]||0);
+
+// ============================================================ derived grids
+function circle(cx,cy,r,f){ const r2=r*r;
+  for (let y=Math.max(0,Math.floor(cy-r)); y<=Math.min(N-1,Math.ceil(cy+r)); y++)
+    for (let x=Math.max(0,Math.floor(cx-r)); x<=Math.min(N-1,Math.ceil(cx+r)); x++){ const dx=x+.5-cx, dy=y+.5-cy; if (dx*dx+dy*dy<=r2) f(y*N+x); } }
+function border(x,y,s,f){
+  for (let k=0;k<s;k++){
+    const pts=[[x+k,y-1],[x+k,y+s],[x-1,y+k],[x+s,y+k]];
+    for (const [px,py] of pts) if (px>=0&&py>=0&&px<N&&py<N) f(py*N+px);
+  }
+}
+let P_outside=null, P_ownEdge=null, P_grid=null;
+function recompute(){
+  const M=G.map;
+  own.fill(0); covM.fill(0); covK.fill(0); covS.fill(0); conn.fill(0);
+  G.cnt={}; G.hubIds=new Set();
+  for (const b of G.buildings){
+    G.cnt[b.t]=(G.cnt[b.t]||0)+1;
+    const d=B[b.t], cx=b.x+d.s/2, cy=b.y+d.s/2;
+    if (d.hub) G.hubIds.add(b.id);
+    if (d.influence){ const id=M.isl[b.y*N+b.x]; circle(cx,cy,d.influence,i=>{ if (M.isl[i]===id) own[i]=1; }); }
+    if (d.radius){ const g = d.hub?covM : d.svc==='kapelle'?covK:covS; circle(cx,cy,d.radius,i=>{ g[i]=1; }); }
+  }
+  const q=[];
+  for (const b of G.buildings) if (B[b.t].hub) border(b.x,b.y,B[b.t].s,i=>{ if (G.road[i]&&!conn[i]){ conn[i]=1; q.push(i); } });
+  while (q.length){ const i=q.pop(), x=i%N, y=(i/N)|0;
+    for (const [dx,dy] of D4){ const nx=x+dx, ny=y+dy; if(nx<0||ny<0||nx>=N||ny>=N) continue; const j=ny*N+nx; if (G.road[j]&&!conn[j]){ conn[j]=1; q.push(j); } } }
+  for (const b of G.buildings){
+    const d=B[b.t];
+    if (d.hub) b.conn=true;
+    else { let c=false; border(b.x,b.y,d.s,i=>{ if (conn[i] || G.hubIds.has(G.occ[i])) c=true; }); b.conn=c; }
+    if (b.t==='holzfaeller'){ let n=0; circle(b.x+.5,b.y+.5,3.3,i=>{ if (M.tree[i]) n++; }); b.trees=n; }
+  }
+  G.cap = 30 + 50*cnt('kontor') + 20*cnt('markt');
+  // overlay paths
+  P_outside=new Path2D(); P_ownEdge=new Path2D(); P_grid=new Path2D();
+  for (let i=0;i<N*N;i++){
+    if (M.T[i]<3) continue;
+    const x=i%N, y=(i/N)|0;
+    if (!own[i]) diamond(P_outside,x,y); else {
+      diamondStroke(P_grid,x,y);
+      if (y===0||!own[i-N]) seg(P_ownEdge,x,y,x+1,y);
+      if (y===N-1||!own[i+N]) seg(P_ownEdge,x,y+1,x+1,y+1);
+      if (x===0||!own[i-1]) seg(P_ownEdge,x,y,x,y+1);
+      if (x===N-1||!own[i+1]) seg(P_ownEdge,x+1,y,x+1,y+1);
+    }
+  }
+  G.dirty=false;
+}
+
+// ============================================================ placement
+const inB = (x,y) => x>=0 && y>=0 && x<N && y<N;
+function nearAny(x,y,s,pred){
+  for (let yy=y-1; yy<=y+s; yy++) for (let xx=x-1; xx<=x+s; xx++){
+    if (!inB(xx,yy) || (xx>=x&&xx<x+s&&yy>=y&&yy<y+s)) continue;
+    if (pred(yy*N+xx)) return true;
+  }
+  return false;
+}
+function unlockText(u){ if(!u) return ''; if (u.pop) return `Ab ${u.pop} Einwohnern`; if (u.t1) return `Ab ${u.t1} Siedlern`; return ''; }
+function isUnlocked(type){ const u=B[type].unlock; if(!u) return true; return G.unlocked.has(type); }
+function costOf(type){ return (type==='kontor' && !cnt('kontor')) ? {} : B[type].cost; }
+function missing(cost){ for (const k in cost){ const have = k==='gold'?G.gold:G.stock[k]; if (have < cost[k]) return k; } return null; }
+function pay(cost, f=1){ for (const k in cost){ if (k==='gold') G.gold-=cost[k]*f; else G.stock[k]-=cost[k]*f; } }
+function canPlace(type,x,y){
+  const d=B[type], s=d.s, M=G.map;
+  if (!G.founded && type!=='kontor') return { ok:false, why:'Gründe zuerst ein Kontor.' };
+  if (!isUnlocked(type)) return { ok:false, why:unlockText(d.unlock)+' verfügbar.' };
+  let isle=-2;
+  for (let yy=y; yy<y+s; yy++) for (let xx=x; xx<x+s; xx++){
+    if (!inB(xx,yy)) return { ok:false, why:'Außerhalb der Karte.' };
+    const i=yy*N+xx;
+    if (M.T[i]<3) return { ok:false, why:'Nur an Land möglich.' };
+    if (M.T[i]===5) return { ok:false, why:'Auf Bergen kann nicht gebaut werden.' };
+    if (G.occ[i] || G.road[i]) return { ok:false, why:'Das Feld ist schon belegt.' };
+    if (type!=='kontor' && !own[i]) return { ok:false, why:'Außerhalb deines Baugebiets. Baue ein Markthaus oder Kontor in der Nähe.' };
+    if (isle===-2) isle=M.isl[i]; else if (isle!==M.isl[i]) return { ok:false, why:'Muss auf einer Insel stehen.' };
+  }
+  if (type==='kontor'){
+    if (!nearAny(x,y,s,i=>M.T[i]<=2)) return { ok:false, why:'Ein Kontor muss direkt an der Küste stehen.' };
+    if (G.buildings.some(b=>b.t==='kontor' && M.isl[b.y*N+b.x]===isle)) return { ok:false, why:'Auf dieser Insel steht schon ein Kontor.' };
+    if (Math.hypot(G.ship.x-(x+1), G.ship.y-(y+1))>7.5) return { ok:false, why:'Dein Schiff muss in der Nähe ankern (höchstens 7 Felder).' };
+  }
+  if (type==='fischer' && !nearAny(x,y,s,i=>M.T[i]<=2)) return { ok:false, why:'Die Fischerhütte muss direkt am Wasser stehen.' };
+  if (type==='steinbruch' && !nearAny(x,y,s,i=>M.T[i]===5)) return { ok:false, why:'Der Steinbruch muss an einen Berg grenzen.' };
+  if (type==='erzmine' && !nearAny(x,y,s,i=>M.ore[i])) return { ok:false, why:'Hier gibt es kein Erzvorkommen. Suche rötlich gesprenkelte Berge.' };
+  if (d.fert==='tee' && !M.comps[isle].tee) return { ok:false, why:'Diese Insel ist nicht fruchtbar für Tee.' };
+  const m = missing(costOf(type));
+  if (m) return { ok:false, why:`Nicht genug ${m==='gold'?'Gold':GOODS[m].n}.` };
+  return { ok:true };
+}
+function place(type,x,y,quiet){
+  const r = canPlace(type,x,y);
+  if (!r.ok){ if (!quiet) toast(r.why,'warn'); return r; }
+  const d=B[type], first = type==='kontor' && !cnt('kontor');
+  pay(costOf(type));
+  for (let yy=y; yy<y+d.s; yy++) for (let xx=x; xx<x+d.s; xx++){ const i=yy*N+xx; if (G.map.tree[i]){ G.map.tree[i]=0; G.cut.push(i); G.terrDirty=true; } }
+  if (type==='strasse'){ G.road[y*N+x]=1; }
+  else {
+    const b = { id:G.nextId++, t:type, x, y, prog:0, out:0, hasIn:false, on:true, eff:0, st:'', conn:false, seed:(x*7+y*13)%97 };
+    if (type==='haus'){ b.tier=0; b.res=1; b.happy=.6; b.upT=0; }
+    addBuilding(b);
+    if (first){ G.founded=true; toast(`Kontor auf ${G.map.comps[G.map.isl[y*N+x]].name} gegründet. Die Ladung deines Schiffs liegt jetzt im Lager.`,'good'); }
+  }
+  recompute();
+  return r;
+}
+function addBuilding(b){
+  G.buildings.push(b); G.byId.set(b.id,b);
+  const s=B[b.t].s; for (let yy=b.y; yy<b.y+s; yy++) for (let xx=b.x; xx<b.x+s; xx++) G.occ[yy*N+xx]=b.id;
+}
+function demolishAt(x,y,quiet){
+  if (!inB(x,y)) return false;
+  const i=y*N+x;
+  if (G.road[i]){ G.road[i]=0; G.dirty=true; return true; }
+  const id=G.occ[i]; if (!id) return false;
+  const b=G.byId.get(id);
+  if (b.t==='kontor' && cnt('kontor')<=1){ if (!quiet) toast('Dein letztes Kontor kannst du nicht abreißen.','warn'); return false; }
+  const d=B[b.t];
+  for (const k in d.cost) if (k!=='gold') G.stock[k]=Math.min(G.cap, G.stock[k]+Math.floor(d.cost[k]/2));
+  for (let yy=b.y; yy<b.y+d.s; yy++) for (let xx=b.x; xx<b.x+d.s; xx++) G.occ[yy*N+xx]=0;
+  G.buildings.splice(G.buildings.indexOf(b),1); G.byId.delete(id);
+  if (sel.kind==='b' && sel.id===id) select(null);
+  G.dirty=true; return true;
+}
+
+// ============================================================ simulation
+const STEP=.25;
+function step(dt){
+  G.t+=dt;
+  const broke = G.gold<0;
+  let upkeep=0;
+  for (const b of G.buildings){ const d=B[b.t]; upkeep+=d.up||0; if (d.out) produce(b,d,dt,broke); }
+  G.gold -= upkeep*dt/60; G.upkeepRate=upkeep;
+  housing(dt);
+  traderTick(dt);
+  G.secAcc+=dt;
+  if (G.secAcc>=1){ G.secAcc=0; checkUnlocks(); checkGoals(); warnings(); }
+}
+function produce(b,d,dt,broke){
+  let working=false, mult = broke?.5:1;
+  const amt = d.amt||1;
+  if (!b.on) b.st='Angehalten';
+  else if (!b.conn) b.st='Keine Straße zum Kontor';
+  else {
+    if (b.out>0){ const room=Math.max(0,Math.floor(G.cap-G.stock[d.out])); const n=Math.min(room,b.out); G.stock[d.out]+=n; b.out-=n; }
+    if (b.t==='holzfaeller') mult *= Math.min(1,(b.trees||0)/8);
+    if (mult<=0) b.st='Kein Wald in der Nähe';
+    else if (b.out>=amt*2) b.st='Lager voll';
+    else {
+      if (d.in && !b.hasIn){
+        let miss=null; for (const g in d.in) if (G.stock[g]<d.in[g]){ miss=g; break; }
+        if (miss) b.st='Es fehlt: '+GOODS[miss].n;
+        else { for (const g in d.in) G.stock[g]-=d.in[g]; b.hasIn=true; }
+      }
+      if (!d.in || b.hasIn){
+        working=true; b.prog+=dt*mult;
+        b.st = broke ? 'Kasse leer, halbe Kraft' : (mult<.99 ? 'Arbeitet langsam' : 'Arbeitet');
+        if (b.prog>=d.time){ b.prog=0; b.hasIn=false; b.out+=amt; G.made[d.out]=(G.made[d.out]||0)+amt; }
+      }
+    }
+  }
+  const k=dt/30; b.eff = b.eff*(1-k) + (working?mult:0)*k;
+  b.active = working;
+}
+const covOf = s => s==='markt'?covM : s==='kapelle'?covK : covS;
+function housing(dt){
+  const dem={}; for (const g of GK) dem[g]=0;
+  const hs = G.buildings.filter(b=>b.t==='haus');
+  for (const b of hs){ const T=TIERS[b.tier]; for (const g in T.needs) dem[g]+=b.res*T.needs[g]*dt/60; }
+  const a=Math.min(1,dt/15);
+  for (const g of GK){
+    if (dem[g]>0){ const f=Math.min(1,G.stock[g]/dem[g]); G.stock[g]=Math.max(0,G.stock[g]-dem[g]*f); G.sup[g]+=(f-G.sup[g])*a; }
+    else G.sup[g]+=(1-G.sup[g])*a;
+  }
+  let tax=0, pop=0; const pt=[0,0,0];
+  for (const b of hs){
+    const T=TIERS[b.tier], i=b.y*N+b.x;
+    let s=0, n=0;
+    for (const g in T.needs){ s+=G.sup[g]; n++; }
+    for (const sv of T.svc){ s+=covOf(sv)[i]?1:0; n++; }
+    const h=s/n; b.happy=h;
+    if (h>.72) b.res=Math.min(T.max,b.res+dt*.15); else if (h<.45) b.res=Math.max(1,b.res-dt*.06);
+    if (b.res>T.max) b.res=T.max;
+    tax += b.res*T.tax*(.35+.65*h)*dt/60;
+    const NX=TIERS[b.tier+1];
+    b.upMiss=null;
+    if (NX && G.allowUp && b.res>=T.max-.05 && h>=.9 && NX.svc.every(sv=>covOf(sv)[i])){
+      b.upT+=dt;
+      if (b.upT>=12){
+        const m=missing(T.up);
+        if (m){ b.upT=12; b.upMiss=m; }
+        else { pay(T.up); b.tier++; b.upT=0;
+          if (!G.tierSeen[b.tier]){ G.tierSeen[b.tier]=true; toast(`Die ersten ${TIERS[b.tier].n} ziehen ein. Sie haben neue Wünsche.`,'good'); } }
+      }
+    } else b.upT=0;
+    pop+=b.res; pt[b.tier]+=b.res;
+  }
+  G.gold+=tax; G.taxRate=tax/dt*60;
+  G.pop=Math.round(pop); G.popT=pt.map(Math.round);
+}
+function checkUnlocks(){
+  const t1 = G.popT[1]+G.popT[2]; const fresh=[];
+  for (const k in B){ const u=B[k].unlock; if (!u || G.unlocked.has(k)) continue;
+    if ((u.pop && G.pop>=u.pop) || (u.t1 && t1>=u.t1)){ G.unlocked.add(k); fresh.push(B[k].n); } }
+  if (fresh.length && !G.demo) { toast('Neu verfügbar: '+fresh.join(', '),'good'); buildTools(); }
+}
+function checkGoals(){
+  if (G.demo) return;
+  while (G.goal<GOALS.length && GOALS[G.goal].ok()){
+    const g=GOALS[G.goal]; G.goal++;
+    if (g.r){ G.gold+=g.r; toast(`Ziel erreicht: ${g.t}. Belohnung ${g.r} Gold.`,'good'); }
+    else if (!g.final) toast(`Ziel erreicht: ${g.t}.`,'good');
+    if (g.final && !G.won){ G.won=true; showMenu('win'); }
+  }
+}
+function warnings(){
+  if (G.demo || !G.founded) return;
+  for (const g of GK){
+    if (G.sup[g]<.5 && G.buildings.some(b=>b.t==='haus'&&TIERS[b.tier].needs[g])){
+      if (!G.warnT[g] || G.t-G.warnT[g]>90){ G.warnT[g]=G.t; toast(`Deinen Bewohnern fehlt ${GOODS[g].n}.`,'warn'); }
+    }
+  }
+  if (G.gold<0 && (!G.warnT.gold || G.t-G.warnT.gold>60)){ G.warnT.gold=G.t; toast('Die Kasse ist leer. Betriebe arbeiten nur noch mit halber Kraft.','warn'); }
+}
+
+// ============================================================ ships
+const nav = i => G.map.T[i]<=2;
+function shipPath(fx,fy,tx,ty){
+  const s=Math.floor(fy)*N+Math.floor(fx), t=ty*N+tx;
+  if (!nav(t)) return null;
+  const prev=new Int32Array(N*N).fill(-1); prev[s]=s; const q=[s];
+  const D8=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+  for (let h=0; h<q.length; h++){ const j=q[h]; if (j===t) break; const x=j%N, y=(j/N)|0;
+    for (const [dx,dy] of D8){ const nx=x+dx, ny=y+dy; if(!inB(nx,ny)) continue; const k=ny*N+nx;
+      if (prev[k]!==-1 || !nav(k)) continue;
+      if (dx&&dy && (!nav(y*N+nx) || !nav(ny*N+x))) continue;
+      prev[k]=j; q.push(k); } }
+  if (prev[t]===-1) return null;
+  const path=[]; for (let j=t; j!==s; j=prev[j]) path.push([j%N+.5,((j/N)|0)+.5]);
+  return path.reverse();
+}
+function moveShip(s,dt,speed){
+  let left=dt;
+  while (left>0 && s.path.length){
+    const [tx,ty]=s.path[0], dx=tx-s.x, dy=ty-s.y, d=Math.hypot(dx,dy);
+    if (d<1e-3){ s.path.shift(); continue; }
+    s.ang=Math.atan2(dy,dx);
+    const m=speed*left;
+    if (m>=d){ s.x=tx; s.y=ty; s.path.shift(); left-=d/speed; } else { s.x+=dx/d*m; s.y+=dy/d*m; left=0; }
+  }
+  let da=s.ang-s.da; while (da>Math.PI) da-=2*Math.PI; while (da<-Math.PI) da+=2*Math.PI;
+  s.da += da*Math.min(1,dt*5);
+  s.moving = s.path.length>0;
+}
+function dockFor(k){
+  let best=null; border(k.x,k.y,2,i=>{ if (!best && nav(i)) best=i; });
+  return best;
+}
+function traderTick(dt){
+  const tr=G.trader;
+  if (!G.founded) return;
+  if (tr.st==='away'){
+    tr.tm-=dt;
+    if (tr.tm<=0){
+      const ks=G.buildings.filter(b=>b.t==='kontor'); const k=ks[Math.floor(Math.random()*ks.length)];
+      const dock=dockFor(k); if (dock==null){ tr.tm=60; return; }
+      const edges=[]; for (let k2=0;k2<N;k2++){ edges.push([k2,0],[0,k2]); }
+      const e=edges[Math.floor(Math.random()*edges.length)];
+      if (!nav(e[1]*N+e[0])){ tr.tm=5; return; }
+      tr.x=e[0]+.5; tr.y=e[1]+.5;
+      const p=shipPath(tr.x,tr.y,dock%N,(dock/N)|0); if (!p){ tr.tm=30; return; }
+      tr.path=p; tr.st='coming'; tr.ang=tr.da=Math.atan2(p[0][1]-tr.y,p[0][0]-tr.x);
+    }
+  } else if (tr.st==='coming'){
+    if (!tr.path.length){ tr.st='docked'; tr.tm=100; toast('Ein Handelsschiff liegt an deinem Kontor. Öffne „Handel“, um zu kaufen oder zu verkaufen.'); }
+  } else if (tr.st==='docked'){
+    tr.tm-=dt;
+    if (tr.tm<=0){ const p=shipPath(tr.x,tr.y,0,Math.floor(tr.y)) || shipPath(tr.x,tr.y,Math.floor(tr.x),0) || [];
+      tr.path=p; tr.st='leaving'; if (sel.kind==='trade') renderPanel(true); }
+  } else if (tr.st==='leaving'){
+    if (!tr.path.length){ tr.st='away'; tr.tm=150+Math.random()*80; }
+  }
+}
+const buyPrice = g => Math.ceil(GOODS[g].p*1.3);
+const sellPrice = g => Math.floor(GOODS[g].p*.75);
+function trade(g, n){
+  if (G.trader.st!=='docked') return;
+  if (n>0){ const c=buyPrice(g)*n; if (G.gold<c){ toast('Nicht genug Gold.','warn'); return; } if (G.stock[g]+n>G.cap){ toast('Dein Lager ist dafür zu voll.','warn'); return; } G.gold-=c; G.stock[g]+=n; }
+  else { const m=-n; if (G.stock[g]<m) return; G.stock[g]-=m; G.gold+=sellPrice(g)*m; }
+  renderPanel(true); updateTop();
+}
+
+// ============================================================ rendering helpers
+const isoX=(x,y)=>(x-y)*HW, isoY=(x,y)=>(x+y)*HH;
+function diamond(p,x,y){ const sx=isoX(x,y), sy=isoY(x,y); p.moveTo(sx,sy); p.lineTo(sx+HW,sy+HH); p.lineTo(sx,sy+2*HH); p.lineTo(sx-HW,sy+HH); p.closePath(); }
+function diamondStroke(p,x,y){ const sx=isoX(x,y), sy=isoY(x,y); p.moveTo(sx,sy); p.lineTo(sx+HW,sy+HH); p.lineTo(sx,sy+2*HH); p.lineTo(sx-HW,sy+HH); p.lineTo(sx,sy); }
+function seg(p,x1,y1,x2,y2){ p.moveTo(isoX(x1,y1),isoY(x1,y1)); p.lineTo(isoX(x2,y2),isoY(x2,y2)); }
+const SC=new Map();
+function sh(hex,f){ const k=hex+f; let v=SC.get(k); if (v) return v;
+  const n=parseInt(hex.slice(1),16); let r=n>>16, g=(n>>8)&255, b=n&255;
+  if (f<=1){ r*=f; g*=f; b*=f; } else { const t=f-1; r+=(255-r)*t; g+=(255-g)*t; b+=(255-b)*t; }
+  v=`rgb(${r|0},${g|0},${b|0})`; SC.set(k,v); return v; }
+function P(c,pts,fill){ c.fillStyle=fill; c.beginPath(); c.moveTo(pts[0][0],pts[0][1]); for (let i=1;i<pts.length;i++) c.lineTo(pts[i][0],pts[i][1]); c.closePath(); c.fill(); }
+function E(c,x,y,rx,ry,fill){ c.fillStyle=fill; c.beginPath(); c.ellipse(x,y,rx,ry,0,0,Math.PI*2); c.fill(); }
+function box(c,cx,cy,a,b,h,col){
+  P(c,[[cx-a,cy],[cx,cy+b],[cx,cy+b-h],[cx-a,cy-h]],sh(col,.9));
+  P(c,[[cx,cy+b],[cx+a,cy],[cx+a,cy-h],[cx,cy+b-h]],sh(col,.7));
+  P(c,[[cx,cy-b-h],[cx+a,cy-h],[cx,cy+b-h],[cx-a,cy-h]],sh(col,1.05));
+}
+function gable(c,cx,cy,a,b,h,rh,roof,wall){
+  const A=a*1.14, Bb=b*1.14, y0=cy-h;
+  const T=[cx,y0-Bb], R=[cx+A,y0], Bo=[cx,y0+Bb], L=[cx-A,y0];
+  const r1=[(T[0]+L[0])/2,(T[1]+L[1])/2-rh], r2=[(R[0]+Bo[0])/2,(R[1]+Bo[1])/2-rh];
+  P(c,[T,R,r2,r1],sh(roof,.78));
+  P(c,[[cx,y0+b],[cx+a,y0],[(cx+a+cx)/2,(y0+y0+b)/2-rh*.92]],sh(wall,.7));
+  P(c,[L,Bo,r2,r1],sh(roof,1));
+  c.strokeStyle=sh(roof,.6); c.lineWidth=1; c.beginPath(); c.moveTo(r1[0],r1[1]); c.lineTo(r2[0],r2[1]); c.stroke();
+}
+function pyramid(c,cx,cy,a,b,h,rh,roof){
+  const A=a*1.14, Bb=b*1.14, y0=cy-h, ap=[cx,y0-rh];
+  const T=[cx,y0-Bb], R=[cx+A,y0], Bo=[cx,y0+Bb], L=[cx-A,y0];
+  P(c,[T,L,ap],sh(roof,.92)); P(c,[T,R,ap],sh(roof,.72)); P(c,[L,Bo,ap],sh(roof,1)); P(c,[Bo,R,ap],sh(roof,.76));
+}
+const fL=(cx,cy,a,b,u,v)=>[cx-a+a*u, cy+b*u-v];
+const fR=(cx,cy,a,b,u,v)=>[cx+a*u, cy+b-b*u-v];
+function winL(c,cx,cy,a,b,u,v,w,h,col){ P(c,[fL(cx,cy,a,b,u,v),fL(cx,cy,a,b,u+w,v),fL(cx,cy,a,b,u+w,v+h),fL(cx,cy,a,b,u,v+h)],col); }
+function winR(c,cx,cy,a,b,u,v,w,h,col){ P(c,[fR(cx,cy,a,b,u,v),fR(cx,cy,a,b,u+w,v),fR(cx,cy,a,b,u+w,v+h),fR(cx,cy,a,b,u,v+h)],col); }
+function smoke(c,x,y,t,dark){
+  for (let k=0;k<4;k++){ const p=((t*.45+k/4)%1);
+    E(c,x+p*8+Math.sin(t*2+k)*1.5,y-p*26,2+p*5,1.8+p*4.5,`rgba(${dark?'70,70,72':'235,232,225'},${(.5*(1-p)).toFixed(3)})`); }
+}
+const shadow=(c,cx,cy,rx,ry)=>E(c,cx+5,cy+3,rx,ry,'rgba(16,30,22,.2)');
+
+// ============================================================ building art
+function drawHouse(c,cx,cy,tier,sd){
+  if (tier===0){
+    shadow(c,cx,cy,17,8);
+    box(c,cx,cy,13,6.5,9,'#a57d4d');
+    winL(c,cx,cy,13,6.5,.55,0,.22,6,'#4e3622');
+    pyramid(c,cx,cy,13,6.5,9,12,'#cfa452');
+  } else if (tier===1){
+    const a=16,b=8,h=13, wall='#ece2ca', roof=['#b4553c','#a8483a','#bf6a3e'][sd%3];
+    shadow(c,cx,cy,21,10);
+    box(c,cx,cy,a,b,h,wall);
+    winL(c,cx,cy,a,b,.18,4,.18,5,'#3d3a3a'); winL(c,cx,cy,a,b,.6,4,.18,5,'#3d3a3a');
+    winR(c,cx,cy,a,b,.4,0,.2,8,'#6b4a2e');
+    gable(c,cx,cy,a,b,h,11,roof,wall);
+  } else {
+    const a=19,b=9.5,h=24, wall='#ddd1b6', roof=['#3e5874','#4a4f6b','#365f5c'][sd%3];
+    shadow(c,cx,cy,25,12);
+    box(c,cx,cy,a,b,h,wall);
+    for (const u of [.12,.44,.74]){ winL(c,cx,cy,a,b,u,4,.14,5,'#34393f'); winL(c,cx,cy,a,b,u,14,.14,5,'#34393f'); }
+    winR(c,cx,cy,a,b,.4,0,.2,9,'#5c3f28'); winR(c,cx,cy,a,b,.4,14,.2,5,'#34393f');
+    gable(c,cx,cy,a,b,h,12,roof,wall);
+    box(c,cx+8,cy-h-3,2.4,1.2,11,'#8a6e5a');
+  }
+}
+function drawB(c,type,cx,cy,o){
+  const t=o.t||0, act=o.active, sd=o.seed||0;
+  switch(type){
+  case 'haus': drawHouse(c,cx,cy,o.tier||0,sd); break;
+  case 'kontor': {
+    P(c,[[cx,cy-30],[cx+60,cy],[cx,cy+30],[cx-60,cy]],'#b99d6c');
+    c.strokeStyle='rgba(80,55,30,.35)'; c.lineWidth=1; c.beginPath();
+    for (let k=-3;k<=3;k++){ c.moveTo(cx-30+k*8,cy-15+k*4); c.lineTo(cx+30+k*8,cy+15+k*4); } c.stroke();
+    shadow(c,cx-6,cy-2,44,20);
+    const wall='#d3bd92';
+    box(c,cx-8,cy-4,34,17,24,wall);
+    for (const u of [.15,.45,.75]) winL(c,cx-8,cy-4,34,17,u,6,.12,7,'#3d3328');
+    winR(c,cx-8,cy-4,34,17,.35,0,.3,14,'#5a3a22');
+    gable(c,cx-8,cy-4,34,17,24,16,'#8e3f2f',wall);
+    box(c,cx+28,cy+8,6,3,7,'#9a6b3c'); box(c,cx+36,cy+3,5,2.5,5,'#86592f'); box(c,cx+20,cy+14,5,2.5,10,'#a77a45');
+    const px=cx-24, py=cy-46;
+    c.strokeStyle='#4a3424'; c.lineWidth=1.6; c.beginPath(); c.moveTo(px,py); c.lineTo(px,py-24); c.stroke();
+    const w=Math.sin(t*3)*2;
+    P(c,[[px,py-24],[px+16,py-21+w],[px+15,py-16+w*.6],[px,py-15]],'#e3a948');
+    break; }
+  case 'markt': {
+    P(c,[[cx,cy-26],[cx+52,cy],[cx,cy+26],[cx-52,cy]],'#cdb78c');
+    c.strokeStyle='rgba(120,95,60,.35)'; c.lineWidth=1; c.beginPath();
+    for (let k=-2;k<=2;k++){ c.moveTo(cx-26+k*10,cy-13+k*5); c.lineTo(cx+26+k*10,cy+13+k*5); } c.stroke();
+    const st=[[-24,-4,'#c0573f'],[0,-16,'#e3a948'],[24,-4,'#3f7f8c'],[0,10,'#e8e0cc'],[-14,6,'#7a9a4a'],[16,6,'#c0573f']];
+    for (const [dx,dy,col] of st){ shadow(c,cx+dx,cy+dy,10,5); box(c,cx+dx,cy+dy,8,4,6,'#8a6a44'); pyramid(c,cx+dx,cy+dy,8,4,6,7,col); }
+    break; }
+  case 'kapelle': {
+    const wall='#ece6da';
+    shadow(c,cx,cy,20,9);
+    box(c,cx+3,cy+1.5,14,7,17,wall);
+    winL(c,cx+3,cy+1.5,14,7,.3,5,.14,8,'#5e6f8a'); winL(c,cx+3,cy+1.5,14,7,.65,5,.14,8,'#5e6f8a');
+    gable(c,cx+3,cy+1.5,14,7,17,11,'#55475e',wall);
+    box(c,cx-9,cy-4.5,6,3,34,wall);
+    winL(c,cx-9,cy-4.5,6,3,.3,24,.4,5,'#3a3540');
+    pyramid(c,cx-9,cy-4.5,6,3,34,18,'#55475e');
+    break; }
+  case 'schule': {
+    const wall='#d7a85f';
+    shadow(c,cx,cy,26,12);
+    box(c,cx,cy,22,11,18,wall);
+    for (const u of [.1,.38,.66]) winL(c,cx,cy,22,11,u,5,.16,8,'#3c4652');
+    winR(c,cx,cy,22,11,.35,0,.25,11,'#5a3a22');
+    gable(c,cx,cy,22,11,18,12,'#4c5a68',wall);
+    box(c,cx-2,cy-1-18-10,4,2,8,'#efe6d2'); pyramid(c,cx-2,cy-1-18-10,4,2,8,7,'#4c5a68');
+    break; }
+  case 'holzfaeller': {
+    shadow(c,cx-4,cy,16,7);
+    box(c,cx-6,cy-2,11,5.5,10,'#8a5f3a'); winR(c,cx-6,cy-2,11,5.5,.4,0,.25,7,'#3a2818');
+    gable(c,cx-6,cy-2,11,5.5,10,8,'#5f4630','#8a5f3a');
+    for (let k=0;k<3;k++) for (let j=0;j<3-k;j++){ const lx=cx+10+j*5+k*2.5, ly=cy+6-k*4.5; E(c,lx,ly,2.8,2.8,'#a5743f'); E(c,lx,ly,1.6,1.6,'#e2b77a'); }
+    break; }
+  case 'fischer': {
+    shadow(c,cx-4,cy,16,7);
+    box(c,cx-6,cy-2,11,5.5,10,'#7d8c8f'); winR(c,cx-6,cy-2,11,5.5,.4,0,.25,7,'#2c3436');
+    gable(c,cx-6,cy-2,11,5.5,10,8,'#4f5e68','#7d8c8f');
+    c.strokeStyle='#5a4330'; c.lineWidth=1.5; c.beginPath(); c.moveTo(cx+10,cy+8); c.lineTo(cx+10,cy-8); c.moveTo(cx+20,cy+3); c.lineTo(cx+20,cy-13); c.stroke();
+    c.strokeStyle='rgba(230,220,200,.75)'; c.lineWidth=.8; c.beginPath();
+    for (let k=0;k<4;k++){ c.moveTo(cx+10,cy-7+k*3.5); c.lineTo(cx+20,cy-12+k*3.5); } c.moveTo(cx+13,cy-9); c.lineTo(cx+13,cy+5); c.moveTo(cx+16.5,cy-10.5); c.lineTo(cx+16.5,cy+3.5); c.stroke();
+    break; }
+  case 'steinbruch': {
+    shadow(c,cx-4,cy,16,7);
+    box(c,cx-7,cy-3,10,5,9,'#9a958a'); gable(c,cx-7,cy-3,10,5,9,7,'#6d6a62','#9a958a');
+    box(c,cx+9,cy+5,5,2.5,5,'#cdc7ba'); box(c,cx+15,cy+1,4,2,4,'#bdb7aa'); box(c,cx+12,cy+3,4,2,9,'#d6d0c3'); box(c,cx+3,cy+9,4,2,4,'#c4beb1');
+    break; }
+  case 'erzmine': {
+    shadow(c,cx,cy,16,7);
+    box(c,cx-2,cy-2,12,6,10,'#4a3b30'); P(c,[fL(cx-2,cy-2,12,6,.3,0),fL(cx-2,cy-2,12,6,.75,0),fL(cx-2,cy-2,12,6,.75,8),fL(cx-2,cy-2,12,6,.3,8)],'#120d0a');
+    pyramid(c,cx-2,cy-2,12,6,10,9,'#6b5747');
+    E(c,cx+14,cy+7,7,3.5,'#6f5a50'); E(c,cx+13,cy+5,3,1.5,'#e9814a'); E(c,cx+16,cy+6,1.5,1,'#e9814a');
+    box(c,cx+4,cy+10,4,2,4,'#7a5a3a');
+    break; }
+  case 'schaf': {
+    P(c,[[cx,cy-29],[cx+58,cy],[cx,cy+29],[cx-58,cy]],'#9cc56f');
+    c.strokeStyle='#8a6a44'; c.lineWidth=1.6; c.beginPath(); c.moveTo(cx,cy-29); c.lineTo(cx+58,cy); c.lineTo(cx,cy+29); c.lineTo(cx-58,cy); c.closePath(); c.stroke();
+    shadow(c,cx-20,cy-10,16,7);
+    box(c,cx-20,cy-10,13,6.5,12,'#9c4a3a'); winR(c,cx-20,cy-10,13,6.5,.35,0,.3,8,'#3a2218');
+    gable(c,cx-20,cy-10,13,6.5,12,9,'#5b3a2e','#9c4a3a');
+    for (let k=0;k<6;k++){ const ph=t*.15*(act?1:0)+k*1.7+sd; const sx=cx+Math.cos(ph)*(16+k*3)+6, sy=cy+6+Math.sin(ph*1.3)*(7+k)*.6;
+      E(c,sx+1,sy+2,4,1.6,'rgba(30,50,20,.2)'); E(c,sx,sy,4,2.8,'#f4f0e6'); E(c,sx+3.6,sy-1,1.5,1.5,'#3a3330'); }
+    break; }
+  case 'getreide': {
+    P(c,[[cx,cy-29],[cx+58,cy],[cx,cy+29],[cx-58,cy]],'#d9b85a');
+    c.strokeStyle='#bf9d43'; c.lineWidth=1.3; c.beginPath();
+    for (let k=-5;k<=5;k++){ c.moveTo(cx-29+k*5.3,cy-14.5-k*2.65+0); c.lineTo(cx+29+k*5.3,cy+14.5-k*2.65); } c.stroke();
+    shadow(c,cx-22,cy-10,14,6);
+    box(c,cx-22,cy-10,12,6,12,'#b07a4a'); winR(c,cx-22,cy-10,12,6,.35,0,.3,8,'#3a2218');
+    gable(c,cx-22,cy-10,12,6,12,9,'#6a4a33','#b07a4a');
+    break; }
+  case 'tee': {
+    P(c,[[cx,cy-29],[cx+58,cy],[cx,cy+29],[cx-58,cy]],'#6f9a47');
+    for (let r=-3;r<=3;r++) for (let k=-4;k<=4;k++){ const bx=cx+(r+k)*6.4, by=cy+(k-r)*3.2; if (Math.abs(r)+Math.abs(k)>6) continue; if (r===-2&&k<0) continue; E(c,bx,by,4.4,2.6,'#3f6e2c'); E(c,bx-.8,by-1,3,1.6,'#5f9440'); }
+    shadow(c,cx-22,cy-10,12,6);
+    box(c,cx-22,cy-10,10,5,10,'#c8b48a'); gable(c,cx-22,cy-10,10,5,10,8,'#4e6b3a','#c8b48a');
+    break; }
+  case 'weberei': {
+    const wall='#ddd0b2';
+    shadow(c,cx,cy,20,9);
+    box(c,cx-4,cy-2,14,7,14,wall); winL(c,cx-4,cy-2,14,7,.2,5,.2,5,'#3d3a3a'); winL(c,cx-4,cy-2,14,7,.6,5,.2,5,'#3d3a3a');
+    gable(c,cx-4,cy-2,14,7,14,10,'#6f5a7e',wall);
+    c.strokeStyle='#6b4a2e'; c.lineWidth=1.3; c.beginPath(); c.moveTo(cx+12,cy+8); c.lineTo(cx+12,cy-6); c.moveTo(cx+22,cy+3); c.lineTo(cx+22,cy-11); c.moveTo(cx+12,cy-6); c.lineTo(cx+22,cy-11); c.stroke();
+    P(c,[[cx+13.5,cy-6],[cx+17,cy-7.7],[cx+17,cy+1+Math.sin(t*2)*.5],[cx+13.5,cy+2.5]],'#d0718f');
+    P(c,[[cx+17.5,cy-8],[cx+21,cy-9.7],[cx+21,cy-1],[cx+17.5,cy+.7+Math.sin(t*2+1)*.5]],'#e3a948');
+    break; }
+  case 'muehle': {
+    shadow(c,cx,cy,14,7);
+    box(c,cx,cy,9,4.5,26,'#e6dccb'); winL(c,cx,cy,9,4.5,.35,4,.3,7,'#5a3a22'); winL(c,cx,cy,9,4.5,.35,16,.3,4,'#3d3a3a');
+    pyramid(c,cx,cy,9,4.5,26,12,'#7b5a3e');
+    const hx=cx+3, hy=cy-27, ang=(act?t*1.6:0)+sd;
+    c.save(); c.translate(hx,hy);
+    for (let k=0;k<4;k++){ const a=ang+k*Math.PI/2, ca=Math.cos(a), sa=Math.sin(a);
+      c.strokeStyle='#4a3424'; c.lineWidth=1.6; c.beginPath(); c.moveTo(0,0); c.lineTo(ca*22,sa*22); c.stroke();
+      const px=-sa*5, py=ca*5;
+      P(c,[[ca*7,sa*7],[ca*22,sa*22],[ca*22+px,sa*22+py],[ca*7+px,sa*7+py]],'rgba(240,232,214,.92)'); }
+    E(c,0,0,2.2,2.2,'#3a2a1c'); c.restore();
+    break; }
+  case 'baecker': {
+    const wall='#e3c9a0';
+    shadow(c,cx,cy,20,9);
+    box(c,cx,cy,15,7.5,13,wall); winL(c,cx,cy,15,7.5,.2,4,.22,5,act?'#f0a040':'#3d3a3a'); winL(c,cx,cy,15,7.5,.6,4,.22,5,'#3d3a3a');
+    winR(c,cx,cy,15,7.5,.4,0,.22,8,'#5a3a22');
+    gable(c,cx,cy,15,7.5,13,10,'#9c4b32',wall);
+    box(c,cx+7,cy-16,2.5,1.25,10,'#8a6e5a');
+    if (act) smoke(c,cx+7,cy-27,t,false);
+    break; }
+  case 'schmiede': {
+    const wall='#6e6a66';
+    shadow(c,cx,cy,20,9);
+    box(c,cx,cy,16,8,14,wall); winL(c,cx,cy,16,8,.25,0,.35,9,act?'#f08a3a':'#2a2624');
+    gable(c,cx,cy,16,8,14,9,'#3c3a38',wall);
+    box(c,cx+8,cy-16,3,1.5,12,'#5a4a40');
+    if (act) smoke(c,cx+8,cy-29,t,true);
+    break; }
+  }
+}
+
+function drawTree(c,x,y,v){
+  const cx=isoX(x,y), cy=isoY(x,y)+HH;
+  const n = 1 + (v%3===0?0:1) + (v%5===0?1:0);
+  const spots=[];
+  for (let k=0;k<n;k++) spots.push([(hash2(x,y,40+k)-.5)*30,(hash2(x,y,50+k)-.5)*12, .8+hash2(x,y,60+k)*.45]);
+  spots.sort((a,b)=>a[1]-b[1]);
+  const conifer = hash2(x,y,61)<.45;
+  for (const [ox,oy,s] of spots){
+    const px=cx+ox, py=cy+oy;
+    E(c,px+5*s,py+1,9*s,3.6*s,'rgba(18,40,20,.25)');
+    c.fillStyle='#6b4a2e'; c.fillRect(px-1.2*s,py-6*s,2.4*s,6*s);
+    if (conifer){
+      const col=['#2f5e3a','#356b3f','#2c5534'][v%3], lit=sh(col,1.18);
+      P(c,[[px,py-25*s],[px-10*s,py-5*s],[px+10*s,py-5*s]],col); P(c,[[px,py-25*s],[px-10*s,py-5*s],[px,py-5*s]],lit);
+      P(c,[[px,py-34*s],[px-7.5*s,py-15*s],[px+7.5*s,py-15*s]],col); P(c,[[px,py-34*s],[px-7.5*s,py-15*s],[px,py-15*s]],lit);
+    } else {
+      const col=v%11===0?'#b08a3a':['#4f8a3c','#5a9442','#64983c'][v%3], lit=sh(col,1.2);
+      E(c,px-4*s,py-13*s,7*s,6.5*s,col); E(c,px+4*s,py-14*s,7*s,6.5*s,col); E(c,px,py-20*s,7.5*s,7*s,col);
+      E(c,px-2.5*s,py-21.5*s,4*s,3.5*s,lit); E(c,px-5.5*s,py-14.5*s,3.4*s,3*s,lit);
+    }
+  }
+}
+function drawMountain(c,x,y,ore){
+  const cx=isoX(x,y), cy=isoY(x,y)+HH;
+  const h=26+hash2(x,y,70)*22, jx=(hash2(x,y,71)-.5)*14;
+  const T=[cx,cy-HH-2], R=[cx+HW+3,cy], Bo=[cx,cy+HH+2], L=[cx-HW-3,cy], A=[cx+jx,cy-h];
+  P(c,[T,L,A],'#a8a291'); P(c,[T,R,A],'#8d8778'); P(c,[L,Bo,A],'#b6af9d'); P(c,[Bo,R,A],'#918b7b');
+  const lerp=(p,q,f)=>[p[0]+(q[0]-p[0])*f,p[1]+(q[1]-p[1])*f];
+  if (h>38){ P(c,[A,lerp(A,L,.26),lerp(A,Bo,.26)],'#f1ede4'); P(c,[A,lerp(A,Bo,.26),lerp(A,R,.26)],'#d4cfc3'); }
+  if (ore){ for (let k=0;k<6;k++){ const f=.3+hash2(x,y,80+k)*.55, g=hash2(x,y,90+k); const p=lerp(lerp(L,Bo,g),A,f*.8); E(c,p[0],p[1],2.2,1.6,'#e0743c'); } }
+}
+function drawShip(c,s,kind,t){
+  const bob=Math.sin(t*2+s.x)*1.2;
+  const px=isoX(s.x,s.y), py=isoY(s.x,s.y)+bob;
+  const ca=Math.cos(s.da), sa=Math.sin(s.da);
+  const pr=(f,q)=>{ const dx=f*ca-q*sa, dy=f*sa+q*ca; return [px+(dx-dy)*HW, py+(dx+dy)*HH]; };
+  if (s.moving) for (let k=0;k<3;k++){ const w=pr(-.75-k*.4,0); E(c,w[0],w[1]+3,6+k*4,2.4+k*1.2,`rgba(255,255,255,${(.32-k*.09).toFixed(2)})`); }
+  E(c,px,py+5,22,8,'rgba(10,40,50,.25)');
+  const hull=[pr(.8,0),pr(.38,.26),pr(-.55,.22),pr(-.64,0),pr(-.55,-.22),pr(.38,-.26)];
+  P(c,hull.map(p=>[p[0],p[1]+4]),kind==='trader'?'#4a2e26':'#3f2a1c');
+  P(c,hull,kind==='trader'?'#7d4a36':'#6e4a2f');
+  const deck=[pr(.68,0),pr(.32,.18),pr(-.48,.15),pr(-.54,0),pr(-.48,-.15),pr(.32,-.18)];
+  P(c,deck,'#a57b4f');
+  const base=pr(.05,0), sv=pr(.05,.34); const vx=sv[0]-base[0], vy=sv[1]-base[1];
+  c.strokeStyle='#3a2818'; c.lineWidth=2; c.beginPath(); c.moveTo(base[0],base[1]); c.lineTo(base[0],base[1]-40); c.stroke();
+  const sail=[[base[0]+vx,base[1]+vy-36],[base[0]-vx,base[1]-vy-36],[base[0]-vx*1.08,base[1]-vy-10],[base[0]+vx*1.08,base[1]+vy-10]];
+  P(c,sail,kind==='trader'?'#eadbb8':'#f5efe1');
+  if (kind==='trader'){ const m=(a,b,f)=>[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f];
+    P(c,[m(sail[0],sail[3],.38),m(sail[1],sail[2],.38),m(sail[1],sail[2],.6),m(sail[0],sail[3],.6)],'#b8442f'); }
+  const fw=Math.sin(t*4)*1.5;
+  P(c,[[base[0],base[1]-40],[base[0]+11,base[1]-37+fw],[base[0],base[1]-33]],kind==='trader'?'#b8442f':'#e3a948');
+}
+
+// ============================================================ terrain static geometry
+const COL = {
+  sand:['#e6d3a0','#dfca93','#ead9ab','#e2cf9a'],
+  grass:['#86b35c','#7eab55','#8dba63','#78a451'],
+  grassT:['#a3c05a','#9ab852','#aac862','#94b04d'],
+  forest:['#6c9a48','#669342','#71a04c','#628d3f'],
+  rock:['#8f8a7a','#8a8575','#958f7f','#868170'],
+};
+let S_land=null, S_shallow1=null, S_shallow2=null, S_cliff=null, S_foam=null, sparkles=[], labels=[];
+function buildStatic(){
+  const M=G.map;
+  S_shallow1=new Path2D(); S_shallow2=new Path2D(); S_cliff=new Path2D(); S_foam=new Path2D();
+  for (let i=0;i<N*N;i++){
+    const x=i%N, y=(i/N)|0, t=M.T[i];
+    if (t===1) diamond(S_shallow1,x,y); else if (t===2) diamond(S_shallow2,x,y);
+    if (t>=3){
+      const wS = y+1<N && M.T[i+N]<3, wE = x+1<N && M.T[i+1]<3, wN = y>0 && M.T[i-N]<3, wW = x>0 && M.T[i-1]<3;
+      if (wS){ const a=[isoX(x,y+1),isoY(x,y+1)], b=[isoX(x+1,y+1),isoY(x+1,y+1)];
+        S_cliff.moveTo(a[0],a[1]); S_cliff.lineTo(b[0],b[1]); S_cliff.lineTo(b[0],b[1]+6); S_cliff.lineTo(a[0],a[1]+6); S_cliff.closePath(); seg(S_foam,x,y+1,x+1,y+1); }
+      if (wE){ const a=[isoX(x+1,y+1),isoY(x+1,y+1)], b=[isoX(x+1,y),isoY(x+1,y)];
+        S_cliff.moveTo(a[0],a[1]); S_cliff.lineTo(b[0],b[1]); S_cliff.lineTo(b[0],b[1]+6); S_cliff.lineTo(a[0],a[1]+6); S_cliff.closePath(); seg(S_foam,x+1,y,x+1,y+1); }
+      if (wN) seg(S_foam,x,y,x+1,y);
+      if (wW) seg(S_foam,x,y,x,y+1);
+    }
+  }
+  const r=mulberry32(G.seed+77); sparkles=[];
+  for (let k=0;k<420;k++){ const x=r()*N, y=r()*N; const i=Math.floor(y)*N+Math.floor(x); if (M.T[i]===0) sparkles.push([isoX(x,y),isoY(x,y),r()*6.28,.6+r()*.8]); }
+  labels = M.comps.map(c=>({ c, x:isoX(c.cx,c.cy), y:isoY(c.cx,c.cy) }));
+}
+function buildLand(){
+  const M=G.map; S_land={};
+  for (const k in COL) S_land[k]=COL[k].map(()=>new Path2D());
+  for (let i=0;i<N*N;i++){
+    const t=M.T[i]; if (t<3) continue;
+    const x=i%N, y=(i/N)|0, sd=M.shade[i];
+    let key = t===3?'sand' : t===5?'rock' : M.tree[i]?'forest' : M.comps[M.isl[i]].tee?'grassT':'grass';
+    diamond(S_land[key][sd],x,y);
+  }
+  G.terrDirty=false;
+  miniBase=null;
+}
+
+// ============================================================ main render
+const cv=$('#world'), ctx=cv.getContext('2d');
+let W=0, H=0, dpr=1, oceanGrad=null;
+function resize(){
+  dpr=Math.min(2,window.devicePixelRatio||1); W=cv.clientWidth; H=cv.clientHeight;
+  cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+  oceanGrad=ctx.createRadialGradient(W*.5,H*.45,0,W*.5,H*.5,Math.max(W,H)*.75);
+  oceanGrad.addColorStop(0,'#1f6a7c'); oceanGrad.addColorStop(1,'#123f4f');
+  const bh=$('#build').getBoundingClientRect().height; if (bh) document.documentElement.style.setProperty('--buildH',Math.round(bh-parseFloat(getComputedStyle($('#build')).paddingBottom)+10)+'px');
+  sizeMini();
+}
+let hover=null, ghostWhy=null, paintTiles=null;
+const clouds=[]; { const r=mulberry32(5); for (let k=0;k<7;k++) clouds.push([r()*N*64-N*32, r()*N*32, 140+r()*160, 60+r()*60, 8+r()*8]); }
+
+function render(rt){
+  const M=G.map, z=cam.z, t=rt, at=G.anim;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.fillStyle=oceanGrad; ctx.fillRect(0,0,W,H);
+  ctx.setTransform(dpr*z,0,0,dpr*z,dpr*(W/2-cam.x*z),dpr*(H/2-cam.y*z));
+  const wx0=cam.x-W/2/z, wx1=cam.x+W/2/z, wy0=cam.y-H/2/z, wy1=cam.y+H/2/z;
+  // sea
+  ctx.fillStyle='rgba(84,178,186,.22)'; ctx.fill(S_shallow2);
+  ctx.fillStyle='rgba(120,206,204,.42)'; ctx.fill(S_shallow1);
+  ctx.lineWidth=1.4; ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.beginPath();
+  for (const [sx,sy,ph,sc] of sparkles){
+    if (sx<wx0-20||sx>wx1+20||sy<wy0-20||sy>wy1+20) continue;
+    const a=RM?.25:Math.sin(t*1.1+ph); if (a<=.15) continue;
+    const off=RM?0:Math.sin(t*.6+ph)*4; ctx.moveTo(sx-6*sc+off,sy); ctx.lineTo(sx+6*sc+off,sy);
+  }
+  ctx.stroke();
+  // coast
+  ctx.fillStyle='#a3895a'; ctx.fill(S_cliff);
+  ctx.save(); ctx.translate(0,RM?6:6+Math.sin(t*1.4)*1.6);
+  ctx.strokeStyle=`rgba(255,255,255,${RM?.4:(.33+.12*Math.sin(t*1.4)).toFixed(3)})`; ctx.lineWidth=3; ctx.lineCap='round'; ctx.stroke(S_foam); ctx.restore();
+  for (const k in S_land) S_land[k].forEach((p,i)=>{ ctx.fillStyle=COL[k][i]; ctx.fill(p); });
+  // build overlays
+  const building = tool && tool!=='abriss' && G.founded && tool!=='kontor';
+  if (building || (tool==='abriss')){
+    ctx.fillStyle='rgba(8,18,26,.32)'; ctx.fill(P_outside);
+    ctx.strokeStyle='rgba(255,255,255,.07)'; ctx.lineWidth=1; ctx.stroke(P_grid);
+  }
+  if (G.founded && (tool || sel.kind==='b')){ ctx.setLineDash([6,5]); ctx.strokeStyle='rgba(227,169,72,.85)'; ctx.lineWidth=2; ctx.stroke(P_ownEdge); ctx.setLineDash([]); }
+  // roads
+  drawRoads(wx0,wx1,wy0,wy1);
+  // selection ground marks
+  if (sel.kind==='b'){ const b=G.byId.get(sel.id); if (b){ const d=B[b.t]; footprintStroke(b.x,b.y,d.s,'#e3a948'); if (d.radius) radiusEll(b.x,b.y,d.s,d.radius,'rgba(227,169,72,.9)'); if (b.t==='holzfaeller') radiusEll(b.x,b.y,1,3.3,'rgba(160,220,140,.9)'); } }
+  if (sel.kind==='ship'){ const s=G.ship; ctx.strokeStyle='rgba(227,169,72,.9)'; ctx.lineWidth=2; ctx.beginPath(); ctx.ellipse(isoX(s.x,s.y),isoY(s.x,s.y)+4,30,15,0,0,Math.PI*2); ctx.stroke();
+    if (s.path.length){ ctx.setLineDash([4,6]); ctx.beginPath(); ctx.moveTo(isoX(s.x,s.y),isoY(s.x,s.y)); for (const [x,y] of s.path) ctx.lineTo(isoX(x,y),isoY(x,y)); ctx.stroke(); ctx.setLineDash([]); } }
+  // objects
+  const objs=[];
+  for (let y=0;y<N;y++) for (let x=0;x<N;x++){
+    const i=y*N+x, sx=(x-y)*HW, sy=(x+y)*HH;
+    if (sx<wx0-70||sx>wx1+70||sy<wy0-20||sy>wy1+80) continue;
+    if (M.T[i]===5) objs.push([x+y+1,0,x,y]);
+    else if (M.tree[i] && !G.occ[i] && !G.road[i]) objs.push([x+y+1,1,x,y]);
+  }
+  for (const b of G.buildings){ const s=B[b.t].s, sx=isoX(b.x,b.y), sy=isoY(b.x,b.y); if (sx<wx0-90||sx>wx1+90||sy<wy0-30||sy>wy1+120) continue; objs.push([b.x+b.y+s,2,b]); }
+  objs.push([G.ship.x+G.ship.y,3,G.ship,'player']);
+  if (G.trader.st!=='away') objs.push([G.trader.x+G.trader.y,3,G.trader,'trader']);
+  objs.sort((a,b)=>a[0]-b[0]);
+  const cheap = z<.55;
+  for (const o of objs){
+    if (o[1]===0) drawMountain(ctx,o[2],o[3],M.ore[o[3]*N+o[2]]);
+    else if (o[1]===1){ if (cheap){ const cx=isoX(o[2],o[3]), cy=isoY(o[2],o[3])+HH; E(ctx,cx,cy-10,12,10,'#3f6e3c'); } else drawTree(ctx,o[2],o[3],M.tree[o[3]*N+o[2]]); }
+    else if (o[1]===2){ const b=o[2], s=B[b.t].s; drawB(ctx,b.t,isoX(b.x,b.y),isoY(b.x,b.y)+s*HH,{tier:b.tier,active:b.active&&G.speed>0,t:at,seed:b.seed}); }
+    else drawShip(ctx,o[2],o[3],t);
+  }
+  // status badges
+  for (const b of G.buildings){
+    const d=B[b.t]; let bad=false;
+    if (d.out) bad = b.on && b.st && !b.st.startsWith('Arbeitet') && b.st!=='Kasse leer, halbe Kraft';
+    else if (b.t==='haus') bad = b.happy<.45;
+    if (!bad) continue;
+    const cx=isoX(b.x,b.y), cy=isoY(b.x,b.y)+d.s*HH-(d.s===2?44:34);
+    if (cx<wx0||cx>wx1||cy<wy0||cy>wy1) continue;
+    E(ctx,cx,cy,7,7,'#e57a62'); ctx.fillStyle='#fff'; ctx.font='700 10px Figtree, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('!',cx,cy+.5);
+  }
+  // ghost
+  drawGhost(at);
+  // cloud shadows
+  if (!RM) for (const cl of clouds){
+    const cx=((cl[0]+t*cl[4]+N*40)%(N*80))-N*40, cy=cl[1];
+    if (cx+cl[2]<wx0||cx-cl[2]>wx1||cy+cl[3]<wy0||cy-cl[3]>wy1) continue;
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,cl[2]); g.addColorStop(0,'rgba(10,25,35,.13)'); g.addColorStop(1,'rgba(10,25,35,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(cx,cy,cl[2],cl[3],0,0,Math.PI*2); ctx.fill();
+  }
+  // screen space labels
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const la = Math.max(0,Math.min(1,(1.15-z)/.35));
+  if (la>0){
+    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    for (const L of labels){
+      const sx=(L.x-cam.x)*z+W/2, sy=(L.y-cam.y)*z+H/2-30*z;
+      if (sx<-100||sx>W+100||sy<-40||sy>H+40) continue;
+      const c=L.c, ex=[c.tee&&'Tee',c.ore&&'Erz',c.mount&&'Stein'].filter(Boolean).join(' · ')||'keine Bodenschätze';
+      ctx.globalAlpha=la;
+      ctx.font='700 15px "Bricolage Grotesque", sans-serif'; ctx.lineWidth=4; ctx.strokeStyle='rgba(13,24,32,.55)'; ctx.strokeText(c.name,sx,sy); ctx.fillStyle='#f6efe0'; ctx.fillText(c.name,sx,sy);
+      ctx.font='600 11px Figtree, sans-serif'; ctx.strokeText(ex,sx,sy+15); ctx.fillStyle='#e8c98d'; ctx.fillText(ex,sx,sy+15);
+      ctx.globalAlpha=1;
+    }
+  }
+  if (ghostWhy && hover){
+    ctx.font='600 12px Figtree, sans-serif'; const w=ctx.measureText(ghostWhy).width+16;
+    const lx=Math.min(W-w-8,hover.sx+16), ly=hover.sy+18;
+    ctx.fillStyle='rgba(13,24,32,.92)'; roundRect(ctx,lx,ly,w,24,6); ctx.fill();
+    ctx.fillStyle='#f0b3a3'; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText(ghostWhy,lx+8,ly+12.5);
+  }
+}
+function roundRect(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+function drawRoads(wx0,wx1,wy0,wy1){
+  const pc=new Path2D(), pu=new Path2D();
+  for (let i=0;i<N*N;i++){
+    if (!G.road[i]) continue;
+    const x=i%N, y=(i/N)|0, cx=isoX(x,y), cy=isoY(x,y)+HH;
+    if (cx<wx0-40||cx>wx1+40||cy<wy0-40||cy>wy1+40) continue;
+    const p = conn[i]?pc:pu;
+    p.moveTo(cx,cy); p.lineTo(cx+.01,cy);
+    if (x+1<N && (G.road[i+1] || G.occ[i+1])){ p.moveTo(cx,cy); p.lineTo(cx+HW/2,cy+HH/2); }
+    if (x>0 && (G.road[i-1] || G.occ[i-1])){ p.moveTo(cx,cy); p.lineTo(cx-HW/2,cy-HH/2); }
+    if (y+1<N && (G.road[i+N] || G.occ[i+N])){ p.moveTo(cx,cy); p.lineTo(cx-HW/2,cy+HH/2); }
+    if (y>0 && (G.road[i-N] || G.occ[i-N])){ p.moveTo(cx,cy); p.lineTo(cx+HW/2,cy-HH/2); }
+  }
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.strokeStyle='#8f7b55'; ctx.lineWidth=17; ctx.stroke(pc); ctx.stroke(pu);
+  ctx.strokeStyle='#d8c69b'; ctx.lineWidth=13; ctx.stroke(pc);
+  ctx.strokeStyle='#c2ae86'; ctx.setLineDash([4,4]); ctx.stroke(pu); ctx.setLineDash([]);
+}
+function footprintStroke(x,y,s,col){
+  ctx.strokeStyle=col; ctx.lineWidth=2.5; ctx.beginPath();
+  ctx.moveTo(isoX(x,y),isoY(x,y)); ctx.lineTo(isoX(x+s,y),isoY(x+s,y)); ctx.lineTo(isoX(x+s,y+s),isoY(x+s,y+s)); ctx.lineTo(isoX(x,y+s),isoY(x,y+s)); ctx.closePath(); ctx.stroke();
+}
+function footprintFill(x,y,s,col){
+  ctx.fillStyle=col; ctx.beginPath();
+  ctx.moveTo(isoX(x,y),isoY(x,y)); ctx.lineTo(isoX(x+s,y),isoY(x+s,y)); ctx.lineTo(isoX(x+s,y+s),isoY(x+s,y+s)); ctx.lineTo(isoX(x,y+s),isoY(x,y+s)); ctx.closePath(); ctx.fill();
+}
+function radiusEll(x,y,s,r,col){
+  const cx=isoX(x+s/2,y+s/2), cy=isoY(x+s/2,y+s/2);
+  ctx.strokeStyle=col; ctx.lineWidth=2; ctx.setLineDash([8,6]); ctx.beginPath(); ctx.ellipse(cx,cy,r*HW*Math.SQRT2,r*HH*Math.SQRT2,0,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle=col.replace(/[\d.]+\)$/,'0.08)'); ctx.fill();
+}
+function drawGhost(at){
+  ghostWhy=null;
+  if (!tool || !hover || G.demo) return;
+  if (paintTiles){
+    for (const [x,y] of paintTiles){
+      if (tool==='abriss'){ const i=y*N+x; if (G.road[i]||G.occ[i]) footprintFill(x,y,1,'rgba(229,122,98,.55)'); else footprintFill(x,y,1,'rgba(229,122,98,.15)'); continue; }
+      const ok=canPlace(tool,x,y).ok;
+      footprintFill(x,y,1,ok?'rgba(134,201,143,.45)':'rgba(229,122,98,.35)');
+      if (ok && tool==='haus'){ ctx.globalAlpha=.7; drawB(ctx,'haus',isoX(x,y),isoY(x,y)+HH,{tier:0,t:at}); ctx.globalAlpha=1; }
+    }
+    return;
+  }
+  const {tx,ty}=hover; const s = tool==='abriss'||tool==='strasse'?1:B[tool].s;
+  const x=tx-(s===2?1:0), y=ty-(s===2?1:0);
+  if (tool==='abriss'){ footprintFill(tx,ty,1,'rgba(229,122,98,.5)'); return; }
+  const r=canPlace(tool,x,y);
+  footprintFill(x,y,s,r.ok?'rgba(134,201,143,.45)':'rgba(229,122,98,.4)');
+  if (!r.ok) ghostWhy=r.why;
+  if (B[tool].radius) radiusEll(x,y,s,B[tool].radius,'rgba(227,169,72,.8)');
+  if (tool==='holzfaeller') radiusEll(x,y,1,3.3,'rgba(160,220,140,.85)');
+  if (tool!=='strasse'){ ctx.globalAlpha=r.ok?.85:.45; drawB(ctx,tool,isoX(x,y),isoY(x,y)+s*HH,{tier:0,t:at,active:true}); ctx.globalAlpha=1; }
+}
+
+// ============================================================ minimap
+const mini=$('#mini'), mctx=mini.getContext('2d'); let miniBase=null, MW=200, MH=110;
+function sizeMini(){ MW=mini.clientWidth||200; MH=mini.clientHeight||110; mini.width=MW*dpr; mini.height=MH*dpr; miniBase=null; }
+function miniK(){ return Math.min(MW/(2*N), MH/N)*.96; }
+function miniXY(fx,fy){ const k=miniK(); return [(fx-fy)*k+MW/2, (fx+fy)*k/2+(MH-N*k)/2]; }
+function drawMini(){
+  if (!G) return;
+  const k=miniK();
+  if (!miniBase){
+    miniBase=document.createElement('canvas'); miniBase.width=MW*dpr; miniBase.height=MH*dpr;
+    const c=miniBase.getContext('2d'); c.scale(dpr,dpr);
+    for (let i=0;i<N*N;i++){ const t=G.map.T[i]; if (t===0) continue; const x=i%N, y=(i/N)|0;
+      c.fillStyle = t===1?'rgba(120,206,204,.55)':t===2?'rgba(84,178,186,.3)':t===3?'#e2cf9a':t===5?'#9a9484':G.map.tree[i]?'#5d8c42':G.map.comps[G.map.isl[i]].tee?'#a3c05a':'#86b35c';
+      const [mx,my]=miniXY(x,y); c.fillRect(mx-k,my,2*k+.4,k+.4); }
+  }
+  mctx.setTransform(dpr,0,0,dpr,0,0); mctx.clearRect(0,0,MW,MH); mctx.drawImage(miniBase,0,0,MW,MH);
+  mctx.fillStyle='#e3a948';
+  for (const b of G.buildings){ const s=B[b.t].s; const [mx,my]=miniXY(b.x+s/2,b.y+s/2); mctx.fillRect(mx-1,my-1,2.4,2.4); }
+  mctx.fillStyle='#fff'; { const [mx,my]=miniXY(G.ship.x,G.ship.y); mctx.beginPath(); mctx.arc(mx,my,2.6,0,7); mctx.fill(); }
+  if (G.trader.st!=='away'){ mctx.fillStyle='#e57a62'; const [mx,my]=miniXY(G.trader.x,G.trader.y); mctx.beginPath(); mctx.arc(mx,my,2.4,0,7); mctx.fill(); }
+  mctx.strokeStyle='rgba(255,255,255,.85)'; mctx.lineWidth=1.2; mctx.beginPath();
+  [[0,0],[W,0],[W,H],[0,H]].forEach(([sx,sy],n)=>{ const f=screenToTile(sx,sy); const [mx,my]=miniXY(f.fx,f.fy); n?mctx.lineTo(mx,my):mctx.moveTo(mx,my); });
+  mctx.closePath(); mctx.stroke();
+}
+function miniJump(e){ const r=mini.getBoundingClientRect(); const k=miniK(); const mx=e.clientX-r.left-MW/2, my=e.clientY-r.top-(MH-N*k)/2;
+  const a=mx/k, b=2*my/k; cam.x=isoX((a+b)/2,(b-a)/2); cam.y=isoY((a+b)/2,(b-a)/2); clampCam(); }
+mini.addEventListener('pointerdown',e=>{ miniJump(e); mini.setPointerCapture(e.pointerId); mini._d=true; });
+mini.addEventListener('pointermove',e=>{ if (mini._d) miniJump(e); });
+mini.addEventListener('pointerup',()=>{ mini._d=false; });
+
+// ============================================================ input
+function screenToTile(sx,sy){ const wx=(sx-W/2)/cam.z+cam.x, wy=(sy-H/2)/cam.z+cam.y; const a=wx/HW, b=wy/HH; return { fx:(a+b)/2, fy:(b-a)/2 }; }
+function tileAt(sx,sy){ const f=screenToTile(sx,sy); return { tx:Math.floor(f.fx), ty:Math.floor(f.fy), fx:f.fx, fy:f.fy, sx, sy }; }
+function clampCam(){ cam.z=Math.max(.4,Math.min(2.2,cam.z)); cam.x=Math.max(-N*HW,Math.min(N*HW,cam.x)); cam.y=Math.max(0,Math.min(N*2*HH,cam.y)); }
+function zoomAt(sx,sy,f){ const wx=(sx-W/2)/cam.z+cam.x, wy=(sy-H/2)/cam.z+cam.y; cam.z=Math.max(.4,Math.min(2.2,cam.z*f)); cam.x=wx-(sx-W/2)/cam.z; cam.y=wy-(sy-H/2)/cam.z; clampCam(); }
+const ptrs=new Map(); let drag=null, pinch=null;
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('wheel',e=>{ e.preventDefault(); zoomAt(e.clientX,e.clientY,Math.exp(-e.deltaY*.0015)); },{passive:false});
+cv.addEventListener('pointerdown',e=>{
+  if (!G || G.demo) return;
+  cv.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if (ptrs.size===2){ const [a,b]=[...ptrs.values()]; pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,z:cam.z,mx:(a.x+b.x)/2,my:(a.y+b.y)/2,cx:cam.x,cy:cam.y}; drag=null; paintTiles=null; return; }
+  const alt = e.button===2||e.button===1;
+  drag={ sx:e.clientX, sy:e.clientY, cx:cam.x, cy:cam.y, start:tileAt(e.clientX,e.clientY), moved:false, pan: alt || !tool || !PAINT.has(tool), button:e.button };
+});
+cv.addEventListener('pointermove',e=>{
+  if (!G) return;
+  hover=tileAt(e.clientX,e.clientY);
+  if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if (pinch && ptrs.size===2){ const [a,b]=[...ptrs.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y), mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+    const wx=(pinch.mx-W/2)/pinch.z+pinch.cx, wy=(pinch.my-H/2)/pinch.z+pinch.cy; cam.z=Math.max(.4,Math.min(2.2,pinch.z*d/pinch.d)); cam.x=wx-(mx-W/2)/cam.z; cam.y=wy-(my-H/2)/cam.z; clampCam(); return; }
+  if (!drag) return;
+  const dx=e.clientX-drag.sx, dy=e.clientY-drag.sy;
+  if (!drag.moved && Math.hypot(dx,dy)>6){ drag.moved=true; if (drag.pan) cv.classList.add('panning'); }
+  if (!drag.moved) return;
+  if (drag.pan){ cam.x=drag.cx-dx/cam.z; cam.y=drag.cy-dy/cam.z; clampCam(); }
+  else paintTiles = paintSet(drag.start, hover);
+});
+function endPtr(e){
+  ptrs.delete(e.pointerId);
+  if (pinch){ if (ptrs.size<2) pinch=null; return; }
+  if (!drag) return;
+  const d=drag; drag=null; cv.classList.remove('panning');
+  if (!d.moved){ if (d.button===2) setTool(null); else if (e.type==='pointerup') clickAt(tileAt(e.clientX,e.clientY)); }
+  else if (!d.pan && paintTiles){ applyPaint(paintTiles); }
+  paintTiles=null;
+}
+cv.addEventListener('pointerup',endPtr); cv.addEventListener('pointercancel',endPtr);
+cv.addEventListener('pointerleave',()=>{ if (!drag) hover=null; });
+function paintSet(a,b){
+  const out=[];
+  if (tool==='strasse'){
+    const sx=Math.sign(b.tx-a.tx), sy=Math.sign(b.ty-a.ty); let x=a.tx, y=a.ty; out.push([x,y]);
+    while (x!==b.tx){ x+=sx; out.push([x,y]); } while (y!==b.ty){ y+=sy; out.push([x,y]); }
+  } else {
+    const x0=Math.min(a.tx,b.tx), x1=Math.max(a.tx,b.tx), y0=Math.min(a.ty,b.ty), y1=Math.max(a.ty,b.ty);
+    for (let y=y0;y<=y1;y++) for (let x=x0;x<=x1;x++){ if (out.length>=300) break; out.push([x,y]); }
+  }
+  return out.filter(([x,y])=>inB(x,y));
+}
+function applyPaint(tiles){
+  let n=0, last=null;
+  for (const [x,y] of tiles){
+    if (tool==='abriss'){ const i=y*N+x; if (G.occ[i] && G.byId.get(G.occ[i]).t!=='haus' && tiles.length>1) continue; if (demolishAt(x,y,true)) n++; continue; }
+    if (tool==='strasse' && G.road[y*N+x]) continue;
+    const r=place(tool,x,y,true); if (r.ok) n++; else last=r.why;
+  }
+  if (tool!=='abriss' && last && /Nicht genug/.test(last)) toast(last,'warn');
+  else if (!n && last) toast(last,'warn');
+}
+function clickAt(h){
+  const {tx,ty}=h;
+  if (tool){
+    if (tool==='abriss'){ demolishAt(tx,ty); return; }
+    if (PAINT.has(tool)){ applyPaint([[tx,ty]]); return; }
+    const s=B[tool].s, x=tx-(s===2?1:0), y=ty-(s===2?1:0);
+    const r=place(tool,x,y);
+    if (r.ok && tool==='kontor'){ setTool(null); select({kind:'b',id:G.occ[y*N+x]}); }
+    return;
+  }
+  // ship hit test
+  const sp=[(isoX(G.ship.x,G.ship.y)-cam.x)*cam.z+W/2,(isoY(G.ship.x,G.ship.y)-15-cam.y)*cam.z+H/2];
+  if (Math.hypot(h.sx-sp[0],h.sy-sp[1])<34*cam.z+6){ select({kind:'ship'}); return; }
+  if (G.trader.st!=='away'){ const tp=[(isoX(G.trader.x,G.trader.y)-cam.x)*cam.z+W/2,(isoY(G.trader.x,G.trader.y)-15-cam.y)*cam.z+H/2]; if (Math.hypot(h.sx-tp[0],h.sy-tp[1])<34*cam.z+6){ select({kind:'trade'}); return; } }
+  if (inB(tx,ty) && G.occ[ty*N+tx]){ select({kind:'b',id:G.occ[ty*N+tx]}); return; }
+  if (sel.kind==='ship' && inB(tx,ty) && nav(ty*N+tx)){
+    const p=shipPath(G.ship.x,G.ship.y,tx,ty); if (p){ G.ship.path=p; } else toast('Dorthin findet dein Schiff keinen Weg.','warn');
+    return;
+  }
+  select(null);
+}
+const keys=new Set();
+addEventListener('keydown',e=>{
+  if (e.target.closest && e.target.closest('input,textarea')) return;
+  if (!G || G.demo) return;
+  const k=e.key.toLowerCase();
+  if (!overlay.hidden){ if (k==='escape') hideMenu(); return; }
+  if (['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){ keys.add(k); e.preventDefault(); }
+  if (k==='escape'){ if (tool) setTool(null); else if (sel.kind) select(null); else showMenu('pause'); }
+  if (k===' '){ e.preventDefault(); setSpeed(G.speed?0:(G.lastSpeed||1)); }
+  if (k==='1') setSpeed(1); if (k==='2') setSpeed(2); if (k==='3') setSpeed(4);
+  if (k==='+'||k==='=') zoomAt(W/2,H/2,1.15); if (k==='-') zoomAt(W/2,H/2,1/1.15);
+  if (k==='x'||k==='delete') setTool('abriss');
+  if (k==='r') setTool('strasse');
+});
+addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+
+// ============================================================ UI
+const goodsEl=$('#goods');
+$('#i-gold').innerHTML=icon('gold',18); $('#i-pop').innerHTML=icon('pop',18);
+goodsEl.innerHTML=GK.map(g=>`<button type="button" class="good" data-g="${g}" title="${GOODS[g].n}">${icon(g)}<span>0</span></button>`).join('');
+goodsEl.addEventListener('click',()=>select(sel.kind==='bilanz'?null:{kind:'bilanz'}));
+$('#b-trade').addEventListener('click',()=>select(sel.kind==='trade'?null:{kind:'trade'}));
+$('#b-menu').addEventListener('click',()=>showMenu('pause'));
+document.querySelectorAll('.speed button').forEach(b=>b.addEventListener('click',()=>setSpeed(+b.dataset.sp)));
+function setSpeed(v){ if (!G) return; if (v>0) G.lastSpeed=v; G.speed=v; document.querySelectorAll('.speed button').forEach(b=>b.classList.toggle('on',+b.dataset.sp===v)); }
+
+let tab=0;
+function buildTabs(){
+  $('#tabs').innerHTML = CATS.map((c,i)=>`<button type="button" class="tab" role="tab" aria-selected="${i===tab}" data-tab="${i}">${c.n}</button>`).join('')+'<span class="sp"></span>';
+}
+$('#tabs').addEventListener('click',e=>{ const b=e.target.closest('[data-tab]'); if (!b) return; tab=+b.dataset.tab; buildTabs(); buildTools(); });
+function buildTools(){
+  const items=[...CATS[tab].items,'abriss'];
+  $('#tools').innerHTML = items.map(k=>`<button type="button" class="tool${tool===k?' on':''}" data-tool="${k}"><canvas width="64" height="48"></canvas><span>${k==='abriss'?'Abreißen':B[k].n}</span></button>`).join('');
+  $('#tools').querySelectorAll('.tool').forEach(el=>thumb(el.querySelector('canvas'),el.dataset.tool,64,48));
+  updateTools();
+}
+$('#tools').addEventListener('click',e=>{ const b=e.target.closest('[data-tool]'); if (!b) return; const k=b.dataset.tool; setTool(tool===k?null:k); });
+$('#tools').addEventListener('pointerover',e=>{ const b=e.target.closest('[data-tool]'); if (b) showHint(b.dataset.tool); });
+$('#tools').addEventListener('pointerleave',()=>showHint(tool));
+function updateTools(){
+  if (!G) return;
+  $('#tools').querySelectorAll('.tool').forEach(el=>{ const k=el.dataset.tool; el.classList.toggle('on',tool===k);
+    if (k==='abriss') return;
+    el.classList.toggle('locked', !isUnlocked(k) || (!G.founded && k!=='kontor'));
+    el.classList.toggle('poor', !!missing(costOf(k))); });
+}
+function costHTML(cost){
+  const parts=[]; for (const k in cost){ const have=k==='gold'?G.gold:G.stock[k]; parts.push(`<i class="${have<cost[k]?'no':''}">${icon(k==='gold'?'gold':k,14)}${cost[k]}</i>`); }
+  return parts.length?`<span class="cost">${parts.join('')}</span>`:'<span class="cost"><i>kostenlos</i></span>';
+}
+function showHint(k){
+  const el=$('#hint');
+  if (!k || !G || G.demo){ el.hidden=true; return; }
+  if (k==='abriss'){ el.innerHTML='<b>Abreißen</b><p>Klicke auf ein Gebäude oder ziehe über Straßen und Wohnhäuser. Du erhältst die Hälfte der Baumaterialien zurück. Taste X.</p>'; el.hidden=false; return; }
+  const d=B[k]; const lock=!isUnlocked(k)?` · <span style="color:var(--warn)">${unlockText(d.unlock)}</span>`:'';
+  const io = d.out ? `<p>${d.in?Object.entries(d.in).map(([g,n])=>`${n} ${GOODS[g].n}`).join(' + ')+' → ':''}${d.amt||1} ${GOODS[d.out].n} alle ${d.time} s · Unterhalt ${d.up} Gold/min</p>` : (d.up?`<p>Unterhalt ${d.up} Gold/min</p>`:'');
+  el.innerHTML=`<b>${d.n}</b>${costHTML(costOf(k))}${lock}<p>${d.desc}</p>${io}`; el.hidden=false;
+}
+function setTool(k){
+  if (k && k!=='abriss' && !G.founded && k!=='kontor'){ toast('Gründe zuerst ein Kontor.','warn'); return; }
+  if (k && k!=='abriss' && !isUnlocked(k)){ toast(unlockText(B[k].unlock)+' verfügbar.','warn'); return; }
+  tool=k||null; paintTiles=null;
+  if (tool && sel.kind!=='ship') select(null);
+  cv.classList.toggle('tool',!!tool);
+  const ci = tool && tool!=='abriss' ? CATS.findIndex(c=>c.items.includes(tool)) : -1;
+  if (ci>=0 && ci!==tab){ tab=ci; buildTabs(); buildTools(); } else updateTools();
+  showHint(tool);
+}
+function thumb(cnv,type,w,h){
+  const r=Math.min(2,devicePixelRatio||1); cnv.width=w*r; cnv.height=h*r; cnv.style.width=w+'px'; cnv.style.height=h+'px';
+  const c=cnv.getContext('2d'); c.setTransform(r,0,0,r,0,0); c.clearRect(0,0,w,h);
+  const s = type==='strasse'||type==='abriss' ? 1 : B[type].s, sc = s===2 ? .4 : .74;
+  c.translate(w/2,h*.7); c.scale(sc,sc);
+  const gcol = type==='tee'?'#a3c05a':'#86b35c';
+  P(c,[[0,-HH*s],[HW*s,0],[0,HH*s],[-HW*s,0]],gcol);
+  P(c,[[-HW*s,0],[0,HH*s],[0,HH*s+5],[-HW*s,5]],'#a3895a'); P(c,[[0,HH*s],[HW*s,0],[HW*s,5],[0,HH*s+5]],'#8e774c');
+  if (type==='strasse'){ c.lineCap='round'; c.strokeStyle='#8f7b55'; c.lineWidth=17; c.beginPath(); c.moveTo(-HW*.5,-HH*.5); c.lineTo(HW*.5,HH*.5); c.stroke(); c.strokeStyle='#d8c69b'; c.lineWidth=13; c.stroke(); }
+  else if (type==='abriss'){ c.strokeStyle='#e57a62'; c.lineWidth=5; c.lineCap='round'; c.beginPath(); c.moveTo(-12,-14); c.lineTo(12,6); c.moveTo(12,-14); c.lineTo(-12,6); c.stroke(); }
+  else drawB(c,type,0,0,{tier:type==='haus'?1:0,active:true,t:1,seed:1});
+}
+
+// panel
+const panel=$('#panel'); let panelSig='';
+function select(s){
+  if (!s){ sel.kind=null; sel.id=0; } else { sel.kind=s.kind; sel.id=s.id||0; }
+  if (s && tool && s.kind!=='ship') setTool(null);
+  renderPanel(true);
+}
+// panel content is rebuilt while the game runs, so act on pointerdown; click covers keyboard activation
+panel.addEventListener('pointerdown',e=>{ if (e.button!==0) return; const b=e.target.closest('[data-act]'); if (!b || b.disabled) return; e.preventDefault(); act(b.dataset.act); });
+panel.addEventListener('click',e=>{ if (e.detail!==0) return; const b=e.target.closest('[data-act]'); if (!b || b.disabled) return; act(b.dataset.act); });
+panel.addEventListener('change',e=>{ if (e.target.id==='allowUp'){ G.allowUp=e.target.checked; } });
+function act(a){
+  const [k,v]=a.split(':');
+  const b = sel.kind==='b' ? G.byId.get(sel.id) : null;
+  if (k==='close') select(null);
+  else if (k==='tool') setTool(v);
+  else if (k==='toggle' && b){ b.on=!b.on; renderPanel(true); }
+  else if (k==='demolish' && b){ if (panel.dataset.confirm==='1'){ demolishAt(b.x,b.y); panel.dataset.confirm=''; } else { panel.dataset.confirm='1'; renderPanel(true); } }
+  else if (k==='buy') trade(v,5);
+  else if (k==='sell') trade(v,-5);
+  else if (k==='goto' && b){ cam.x=isoX(b.x+1,b.y+1); cam.y=isoY(b.x+1,b.y+1); }
+}
+const pct = v => Math.round(v*100)+' %';
+const barCls = v => v>=.75?'g':v>=.45?'w':'b';
+function rates(){
+  const p={}, q={}; for (const g of GK){ p[g]=0; q[g]=0; }
+  for (const b of G.buildings){ const d=B[b.t];
+    if (d.out){ const per=60/d.time*(b.eff||0); p[d.out]+=per*(d.amt||1); if (d.in) for (const g in d.in) q[g]+=per*d.in[g]; }
+    else if (b.t==='haus'){ const T=TIERS[b.tier]; for (const g in T.needs) q[g]+=b.res*T.needs[g]; } }
+  return {p,q};
+}
+function renderPanel(force){
+  if (!G || !sel.kind){ panel.hidden=true; panelSig=''; return; }
+  let html='', sig='', th=null;
+  if (sel.kind==='b'){
+    const b=G.byId.get(sel.id); if (!b){ select(null); return; }
+    const d=B[b.t]; th=b.t;
+    const confirm=panel.dataset.confirm==='1';
+    if (b.t==='haus'){
+      const T=TIERS[b.tier], NX=TIERS[b.tier+1], i=b.y*N+b.x;
+      sig=[b.id,b.tier,Math.floor(b.res),Math.round(b.happy*20),b.upMiss,b.upT>0,G.allowUp,confirm,cnt('kapelle'),cnt('schule')].join('|');
+      const needs = Object.keys(T.needs).map(g=>`<div class="row"><span class="l">${icon(g)}${GOODS[g].n}</span><span class="v">${pct(G.sup[g])}</span></div><div class="bar ${barCls(G.sup[g])}"><i style="width:${G.sup[g]*100}%"></i></div>`).join('')
+        + T.svc.map(sv=>{ const ok=covOf(sv)[i]; return `<div class="row"><span class="l">${SVC_N[sv]}</span><span class="pill ${ok?'ok':'bad'}">${ok?'ja':'nein'}</span></div>`; }).join('');
+      let up='';
+      if (NX){
+        const full=b.res>=T.max-.05, happy=b.happy>=.9, svc=NX.svc.every(sv=>covOf(sv)[i]), mat=!missing(T.up);
+        const r=(ok,txt)=>`<div class="req"><span class="${ok?'ok':'no'}">${ok?'✓':'✕'}</span><span>${txt}</span></div>`;
+        up=`<div class="sec"><h4>Aufstieg zu ${NX.n}</h4>${r(full,`Haus voll belegt (${T.max} ${T.n})`)}${r(happy,'Zufriedenheit mindestens 90 %')}${NX.svc.filter(sv=>!T.svc.includes(sv)).map(sv=>r(covOf(sv)[i],SVC_N[sv])).join('')}${r(mat,'Material: '+Object.entries(T.up).map(([g,n])=>`${n} ${GOODS[g].n}`).join(', '))}
+          <label class="check"><input type="checkbox" id="allowUp" ${G.allowUp?'checked':''}> Aufstieg für alle Häuser erlauben</label></div>`;
+      } else up=`<div class="sec"><p class="note">Bürger sind die höchste Stufe. Jeder zahlt ${T.tax} Gold Steuern pro Minute.</p></div>`;
+      html=head(T.house,`${Math.floor(b.res)} von ${T.max} ${T.n}`)+
+        `<div class="sec"><div class="row"><span class="l">Zufriedenheit</span><span class="v">${pct(b.happy)}</span></div><div class="bar ${barCls(b.happy)}"><i style="width:${b.happy*100}%"></i></div></div>
+        <div class="sec"><h4>Bedürfnisse</h4>${needs}</div>${up}
+        <div class="sec"><div class="btns"><button class="btn danger" data-act="demolish" type="button">${confirm?'Wirklich abreißen?':'Abreißen'}</button></div></div>`;
+    } else if (d.out){
+      sig=[b.id,b.st,b.on,b.conn,confirm,b.trees].join('|');
+      const io=`${d.in?Object.entries(d.in).map(([g,n])=>`${n} ${icon(g,14)} ${GOODS[g].n}`).join(' + ')+' → ':''}${d.amt||1} ${icon(d.out,14)} ${GOODS[d.out].n}`;
+      const stc = b.st.startsWith('Arbeitet')?'ok': b.st==='Angehalten'?'warn':'bad';
+      html=head(d.n,`Unterhalt ${d.up} Gold pro Minute`)+
+        `<div class="sec"><div class="row"><span class="l">Zustand</span><span class="pill ${stc}">${b.st||'Wartet'}</span></div>
+        <div class="row"><span class="l">Fortschritt</span><span class="v" data-v="prog"></span></div><div class="bar"><i data-bar="prog"></i></div>
+        <div class="row"><span class="l">Auslastung</span><span class="v" data-v="eff"></span></div><div class="bar g"><i data-bar="eff"></i></div></div>
+        <div class="sec"><h4>Produktion alle ${d.time} s</h4><div class="row"><span class="l" style="flex-wrap:wrap">${io}</span></div>
+        ${b.t==='holzfaeller'?`<p class="note">${b.trees||0} Bäume in Reichweite, voll ausgelastet ab 8.</p>`:''}
+        ${!b.conn?'<p class="note">Baue eine Straße von diesem Betrieb bis zu einem Kontor oder Markthaus.</p>':''}</div>
+        <div class="sec"><div class="btns"><button class="btn" data-act="toggle" type="button">${b.on?'Anhalten':'Fortsetzen'}</button><button class="btn danger" data-act="demolish" type="button">${confirm?'Wirklich abreißen?':'Abreißen'}</button></div></div>`;
+    } else {
+      const isle=G.map.comps[G.map.isl[b.y*N+b.x]];
+      sig=[b.id,confirm,G.cap,isle.id,cnt(b.t)].join('|');
+      const pills=`<span class="pill ${isle.tee?'ok':''}">Tee ${isle.tee?'✓':'✕'}</span> <span class="pill ${isle.ore?'ok':''}">Erz ${isle.ore?'✓':'✕'}</span> <span class="pill ${isle.mount?'ok':''}">Stein ${isle.mount?'✓':'✕'}</span>`;
+      const svcTxt = d.hub ? `Versorgt Häuser im Umkreis von ${d.radius} Feldern mit Waren und nimmt Waren der angeschlossenen Betriebe an.` : d.svc==='kapelle' ? `Erfüllt den Wunsch nach einer Kapelle im Umkreis von ${d.radius} Feldern.` : `Erfüllt den Wunsch nach einer Schule im Umkreis von ${d.radius} Feldern.`;
+      html=head(d.n, `Insel ${isle.name} · Unterhalt ${d.up} Gold/min`)+
+        `<div class="sec"><p class="note">${svcTxt}</p>${d.hub?`<div class="row"><span class="l">Lagerplatz je Ware</span><span class="v">${G.cap}</span></div>`:''}</div>
+        <div class="sec"><h4>Fruchtbarkeit der Insel</h4><div>${pills}</div></div>
+        <div class="sec"><div class="btns">${b.t==='kontor'?'<button class="btn" data-act="tool:markt" type="button">Markthaus bauen</button>':''}<button class="btn danger" data-act="demolish" type="button">${confirm?'Wirklich abreißen?':'Abreißen'}</button></div></div>`;
+    }
+  } else if (sel.kind==='ship'){
+    const s=G.ship; let near=null, nd=1e9;
+    for (const c of G.map.comps){ for (const j of c.tiles){ const d=Math.hypot(j%N+.5-s.x,((j/N)|0)+.5-s.y); if (d<nd){ nd=d; near=c; } } }
+    const nearIsle = nd<=8 ? near : null;
+    sig=['ship',nearIsle&&nearIsle.id,G.founded,s.moving].join('|');
+    html=head('Brise',s.moving?'Segelt …':'Liegt vor Anker')+
+      `<div class="sec"><p class="note">Klicke aufs Wasser, um zu segeln. Ein Kontor kannst du an jeder Küste bis 7 Felder vom Schiff entfernt gründen, eines pro Insel.</p></div>`+
+      (!G.founded?`<div class="sec"><h4>Laderaum</h4>${['holz','werkzeug','fisch'].map(g=>`<div class="row"><span class="l">${icon(g)}${GOODS[g].n}</span><span class="v">${Math.floor(G.stock[g])}</span></div>`).join('')}</div>`:'')+
+      (nearIsle?`<div class="sec"><h4>Insel in Sicht: ${nearIsle.name}</h4><div><span class="pill ${nearIsle.tee?'ok':''}">Tee ${nearIsle.tee?'✓':'✕'}</span> <span class="pill ${nearIsle.ore?'ok':''}">Erz ${nearIsle.ore?'✓':'✕'}</span> <span class="pill ${nearIsle.mount?'ok':''}">Stein ${nearIsle.mount?'✓':'✕'}</span></div></div>`:'')+
+      `<div class="sec"><div class="btns"><button class="btn primary" data-act="tool:kontor" type="button">Kontor gründen</button></div><p class="note">${G.founded?`Weitere Kontore kosten ${costHTML(B.kontor.cost)}`:'Dein erstes Kontor ist kostenlos.'}</p></div>`;
+  } else if (sel.kind==='trade'){
+    const tr=G.trader;
+    if (tr.st==='docked'){
+      sig=['trade',GK.map(g=>Math.floor(G.stock[g])+(G.gold>=buyPrice(g)*5&&G.stock[g]+5<=G.cap?'b':'')).join(',')].join('|');
+      html=head('Handelsschiff','Liegt noch <span data-v="trtm"></span> am Kontor')+
+        `<div class="sec"><table class="tt"><thead><tr><th>Ware</th><th class="n">Lager</th><th class="n">Kauf 5</th><th class="n">Verkauf 5</th></tr></thead><tbody>${GK.map(g=>`<tr><td><span class="gname">${icon(g)}${GOODS[g].n}</span></td><td class="n">${Math.floor(G.stock[g])}</td><td class="n"><button type="button" data-act="buy:${g}" ${G.gold<buyPrice(g)*5||G.stock[g]+5>G.cap?'disabled':''}>${buyPrice(g)*5}</button></td><td class="n"><button type="button" data-act="sell:${g}" ${G.stock[g]<5?'disabled':''}>${sellPrice(g)*5}</button></td></tr>`).join('')}</tbody></table>
+        <p class="note">Preise in Gold für jeweils 5 Einheiten.</p></div>`;
+    } else {
+      sig=['trade-away',tr.st,G.founded];
+      html=head('Handel', tr.st==='coming'?'Ein Händler ist unterwegs zu dir':tr.st==='leaving'?'Der Händler legt gerade ab':'Kein Händler im Hafen')+
+        `<div class="sec"><p class="note">${G.founded?'Regelmäßig legt ein Handelsschiff mit rot gestreiftem Segel an einem deiner Kontore an. Solange es dort liegt, kannst du Waren kaufen und verkaufen.':'Sobald du ein Kontor gegründet hast, besuchen dich Händler.'}</p>${tr.st==='away'&&G.founded?'<div class="row"><span class="l">Nächster Besuch in etwa</span><span class="v" data-v="trtm"></span></div>':''}</div>`;
+    }
+  } else if (sel.kind==='bilanz'){
+    const {p,q}=rates();
+    sig=['bil',GK.map(g=>Math.floor(G.stock[g])+':'+p[g].toFixed(1)+':'+q[g].toFixed(1)).join(','),G.cap,Math.round(G.taxRate),Math.round(G.upkeepRate),G.popT.join()].join('|');
+    html=head('Warenbilanz',`Lagerplatz ${G.cap} je Ware · pro Minute`)+
+      `<div class="sec"><table class="tt"><thead><tr><th>Ware</th><th class="n">Lager</th><th class="n">Herstellung</th><th class="n">Verbrauch</th></tr></thead><tbody>${GK.map(g=>`<tr><td><span class="gname">${icon(g)}${GOODS[g].n}</span></td><td class="n">${Math.floor(G.stock[g])}</td><td class="n ${p[g]>0?'pos':''}">${p[g]>0?'+'+p[g].toFixed(1):'·'}</td><td class="n ${q[g]>p[g]&&q[g]>0?'neg':''}">${q[g]>0?'−'+q[g].toFixed(1):'·'}</td></tr>`).join('')}</tbody></table></div>
+      <div class="sec"><div class="row"><span class="l">Steuern</span><span class="v">+${G.taxRate.toFixed(0)} Gold</span></div><div class="row"><span class="l">Unterhalt</span><span class="v">−${G.upkeepRate.toFixed(0)} Gold</span></div>
+      <div class="row"><span class="l">Pioniere · Siedler · Bürger</span><span class="v">${G.popT.join(' · ')}</span></div></div>`;
+  }
+  if (!force && sig===panelSig){ updatePanelLive(); return; }
+  if (force && sel.kind!=='b') panel.dataset.confirm='';
+  panelSig=sig; panel.innerHTML=html; panel.hidden=false;
+  const tc=panel.querySelector('.ph canvas'); if (tc) thumb(tc, th||'kontor', 56, 44);
+  if (sel.kind==='ship' || sel.kind==='trade'){ const tc2=panel.querySelector('.ph canvas'); if (tc2) shipThumb(tc2, sel.kind); }
+  updatePanelLive();
+  function head(t,sub){ return `<div class="ph"><canvas width="56" height="44"></canvas><div><h2>${t}</h2><p class="sub">${sub}</p></div><button class="x" type="button" data-act="close" aria-label="Schließen">✕</button></div>`; }
+}
+function shipThumb(cnv,kind){
+  const r=Math.min(2,devicePixelRatio||1); cnv.width=56*r; cnv.height=44*r; cnv.style.width='56px'; cnv.style.height='44px';
+  const c=cnv.getContext('2d'); c.setTransform(r,0,0,r,0,0);
+  c.fillStyle='#1f6a7c'; c.fillRect(0,0,56,44);
+  c.translate(28,30); c.scale(.62,.62);
+  drawShip(c,{x:0,y:0,da:.6,moving:false},kind==='trade'?'trader':'player',0);
+}
+function updatePanelLive(){
+  if (panel.hidden) return;
+  if (sel.kind==='b'){ const b=G.byId.get(sel.id); if (!b) return; const d=B[b.t];
+    if (d.out){ const pg=panel.querySelector('[data-bar="prog"]'); if (pg) pg.style.width=(b.prog/d.time*100)+'%'; const pv=panel.querySelector('[data-v="prog"]'); if (pv) pv.textContent=Math.round(b.prog/d.time*100)+' %';
+      const eb=panel.querySelector('[data-bar="eff"]'); if (eb) eb.style.width=(b.eff*100)+'%'; const ev=panel.querySelector('[data-v="eff"]'); if (ev) ev.textContent=pct(b.eff); } }
+  const tv=panel.querySelector('[data-v="trtm"]'); if (tv) tv.textContent=Math.max(0,Math.ceil(G.trader.tm))+' s';
+}
+
+// goals, top bar
+let goalSig='';
+const goalsEl=$('#goals');
+goalsEl.addEventListener('click',e=>{ if (e.target.closest('h3')){ goalsEl.classList.toggle('min'); try{ localStorage.setItem('salzwind-goals-min',goalsEl.classList.contains('min')?'1':''); }catch(_){} } });
+try{ if (localStorage.getItem('salzwind-goals-min')==='1' || innerWidth<760) goalsEl.classList.add('min'); }catch(_){ if (innerWidth<760) goalsEl.classList.add('min'); }
+function updateGoals(){
+  if (!G || G.demo){ goalsEl.hidden=true; return; }
+  goalsEl.hidden=false;
+  const sig=G.goal+'|'+G.won; if (sig===goalSig) return; goalSig=sig;
+  const list=GOALS.slice(G.goal,G.goal+3);
+  goalsEl.innerHTML=`<h3>Ziele <span>${Math.min(G.goal,GOALS.length)} / ${GOALS.length}</span></h3>`+
+    (list.length?`<ol>${list.map((g,i)=>`<li class="${i?'next':''}"><span class="dot"></span><div>${g.t}${i===0?`<p>${g.h}</p>`:''}</div></li>`).join('')}</ol>`:'<ol><li><span class="dot"></span><div>Alle Ziele erreicht. Baue weiter, wie du magst.</div></li></ol>');
+}
+function updateTop(){
+  if (!G) return;
+  $('#v-gold').textContent=fmt.format(Math.floor(G.gold));
+  const net=G.taxRate-G.upkeepRate; const inc=$('#v-inc'); inc.textContent=(net>=0?'+':'−')+fmt.format(Math.abs(Math.round(net)))+'/min'; inc.classList.toggle('neg',net<0);
+  $('#v-pop').textContent=fmt.format(G.pop);
+  goodsEl.querySelectorAll('.good').forEach(el=>{ const g=el.dataset.g, v=Math.floor(G.stock[g]); el.querySelector('span').textContent=v; el.classList.toggle('zero',v<=0); el.classList.toggle('full',G.founded&&v>=G.cap); el.title=`${GOODS[g].n}: ${v} von ${G.cap}`; });
+  const tb=$('#b-trade'); tb.classList.toggle('live',G.trader.st==='docked'); tb.textContent=G.trader.st==='docked'?'Händler da':'Handel';
+}
+
+// toasts
+function toast(msg,kind){
+  if (G && G.demo) return;
+  const el=document.createElement('div'); el.className='toast '+(kind||''); el.textContent=msg;
+  const box=$('#toasts'); box.appendChild(el); while (box.children.length>4) box.firstChild.remove();
+  setTimeout(()=>el.remove(),5200);
+}
+
+// ============================================================ menu overlay
+const overlay=$('#overlay'), card=$('#card');
+function hasSave(){ try{ return !!localStorage.getItem(SAVE_KEY); }catch(_){ return false; } }
+function showMenu(mode){
+  overlay.hidden=false;
+  if (G && !G.demo){ G.menuSpeed = G.speed || G.menuSpeed || 1; setSpeed(0); }
+  const controls=`<details><summary>So wird gespielt</summary>
+    <dl><dt>Linke Maustaste</dt><dd>Auswählen, bauen. Straßen, Wohnhäuser und Abriss lassen sich ziehen.</dd>
+    <dt>Ziehen / rechte Taste</dt><dd>Karte verschieben. Auf dem Handy mit einem Finger, Zoom mit zwei.</dd>
+    <dt>Mausrad, + / −</dt><dd>Zoomen</dd><dt>Leertaste, 1 · 2 · 3</dt><dd>Pause und Spieltempo</dd><dt>R · X · Esc</dt><dd>Straße · Abriss · Abbrechen</dd></dl>
+    <div class="chain"><div>${icon('wolle')} Schaffarm → ${icon('stoff')} Weberei</div><div>${icon('getreide')} Getreidefarm → ${icon('mehl')} Mühle → ${icon('brot')} Bäckerei</div><div>${icon('erz')} Erzmine + ${icon('holz')} Holz → ${icon('werkzeug')} Werkzeugschmiede</div></div>
+    <p class="note" style="margin-top:10px">Pioniere wollen Fisch und einen Markt. Mit Kapelle steigen sie zu Siedlern auf, die zusätzlich Stoff wollen. Mit Schule werden Siedler zu Bürgern, die Brot und Tee verlangen.</p></details>`;
+  if (mode==='win'){
+    const mins=Math.round(G.t/60);
+    card.innerHTML=`<p class="eyebrow">Ziel erreicht</p><h1>Hafenstadt</h1><p class="lede">Nach ${mins} Spielminuten leben ${fmt.format(G.pop)} Menschen in deiner Kolonie, davon ${fmt.format(G.popT[2])} Bürger. Du kannst weiterbauen, so lange du willst.</p><div class="actions"><button class="btn primary" id="m-resume" type="button">Weiterspielen</button></div>`;
+  } else if (mode==='pause'){
+    card.innerHTML=`<p class="eyebrow">Spiel pausiert · ${Math.floor(G.t/60)} Minuten gespielt</p><h1>Salzwind</h1>
+      <div class="actions"><button class="btn primary" id="m-resume" type="button">Weiterspielen</button><button class="btn" id="m-save" type="button">Speichern</button><button class="btn" id="m-new" type="button">Neue Karte</button></div>${controls}
+      <p class="fine">Karte Nr. ${G.seed} · speichert automatisch jede Minute in diesem Browser</p>`;
+  } else {
+    const save=hasSave();
+    card.innerHTML=`<p class="eyebrow">Seekarte · Archipel der Winde · 80 × 80 Felder</p><h1>Salzwind</h1>
+      <p class="lede">Ein Schiff, 45 Stämme Holz und 22 Kisten Werkzeug. Segle zu unbekannten Inseln, gründe ein Kontor, verbinde Betriebe über Straßen und lass Pioniere zu Siedlern und Bürgern aufsteigen.</p>
+      <div class="actions">${save?'<button class="btn primary" id="m-load" type="button">Weiterspielen</button>':''}<button class="btn ${save?'':'primary'}" id="m-new" type="button">Neue Karte</button></div>${controls}
+      <p class="fine">Spielstände bleiben in diesem Browser gespeichert.</p>`;
+  }
+  const on=(id,f)=>{ const el=$(id); if (el) el.addEventListener('click',f); };
+  on('#m-resume',hideMenu);
+  on('#m-save',()=>{ saveGame(); $('#m-save').textContent='Gespeichert'; });
+  on('#m-load',()=>{ if (!loadGame()) { toast('Der Spielstand ließ sich nicht laden.','warn'); startNew(); } });
+  on('#m-new',e=>{
+    if (G && !G.demo && G.founded && e.currentTarget.dataset.c!=='1'){ e.currentTarget.dataset.c='1'; e.currentTarget.textContent='Wirklich neu beginnen?'; return; }
+    startNew();
+  });
+}
+function hideMenu(){ overlay.hidden=true; if (G && !G.demo) setSpeed(G.menuSpeed||1); }
+function startNew(){
+  const seed=(Math.random()*1e6)|0;
+  boot(newState(seed,false));
+  hideMenu(); setSpeed(1);
+  cam.z=1.1; cam.x=isoX(G.ship.x,G.ship.y); cam.y=isoY(G.ship.x,G.ship.y);
+  select({kind:'ship'});
+  toast('Dein Schiff „Brise“ liegt vor einer Insel. Wähle unten „Kontor“ und setze es an die Küste.');
+}
+function boot(state){
+  G=state; freshGrids(); tool=null; sel.kind=null; panelSig=''; goalSig='';
+  document.body.classList.toggle('demo',G.demo);
+  buildStatic(); buildLand(); recompute(); checkUnlocks();
+  buildTabs(); buildTools(); updateTop(); updateGoals(); renderPanel(true); showHint(null);
+  setSpeed(G.speed); requestAnimationFrame(resize);
+}
+
+// ============================================================ save / load
+function serialize(){
+  return { v:1, seed:G.seed, t:G.t, gold:G.gold, stock:G.stock, sup:G.sup, founded:G.founded, goal:G.goal, won:G.won, allowUp:G.allowUp,
+    cut:G.cut, roads:[...G.road.keys()].filter(i=>G.road[i]), tierSeen:G.tierSeen, unlocked:[...G.unlocked],
+    b:G.buildings.map(b=>[b.t,b.x,b.y,b.tier||0,+(b.res||0).toFixed(2),b.on?1:0,+b.prog.toFixed(2),b.out,b.hasIn?1:0]),
+    ship:{x:G.ship.x,y:G.ship.y,a:G.ship.da}, trader:{tm:G.trader.st==='away'?G.trader.tm:120},
+    cam:{x:cam.x,y:cam.y,z:cam.z} };
+}
+function restore(s){
+  const g=newState(s.seed,false);
+  Object.assign(g,{ t:s.t, gold:s.gold, founded:s.founded, goal:s.goal, won:s.won, allowUp:s.allowUp!==false, tierSeen:s.tierSeen||g.tierSeen, unlocked:new Set(s.unlocked||[]) });
+  for (const k of GK){ g.stock[k]=s.stock[k]||0; g.sup[k]=s.sup?s.sup[k]??1:1; }
+  for (const i of s.cut||[]) g.map.tree[i]=0; g.cut=(s.cut||[]).slice();
+  for (const i of s.roads||[]) g.road[i]=1;
+  G=g;
+  for (const [t,x,y,tier,res,on,prog,out,hasIn] of s.b){ const b={ id:g.nextId++, t, x, y, prog:prog||0, out:out||0, hasIn:!!hasIn, on:!!on, eff:.5, st:'', conn:false, seed:(x*7+y*13)%97 }; if (t==='haus'){ b.tier=tier; b.res=res; b.happy=.7; b.upT=0; } addBuilding(b); }
+  g.ship.x=s.ship.x; g.ship.y=s.ship.y; g.ship.da=g.ship.ang=s.ship.a||0;
+  g.trader.tm=s.trader?s.trader.tm:120;
+  return g;
+}
+function saveGame(){ if (!G || G.demo) return; try{ localStorage.setItem(SAVE_KEY,JSON.stringify(serialize())); }catch(_){} }
+function loadGame(data){
+  try{ const s=data || JSON.parse(localStorage.getItem(SAVE_KEY)||'null'); if (!s || s.v!==1) return false;
+    const g=restore(s); boot(g); if (s.cam){ cam.x=s.cam.x; cam.y=s.cam.y; cam.z=s.cam.z; clampCam(); }
+    hideMenu(); setSpeed(1); return true; }catch(err){ console.error(err); return false; }
+}
+
+// ============================================================ loop
+let last=performance.now(), rt=0, acc=0, lastUI=0, lastSave=0;
+function frame(now){
+  const rdt=Math.min(.1,(now-last)/1000); last=now; rt+=rdt;
+  if (G){
+    if (G.demo){ cam.x+=Math.cos(rt*.05)*14*rdt; cam.y+=Math.sin(rt*.07)*8*rdt; }
+    else {
+      const gdt=rdt*G.speed;
+      if (G.speed>0){ G.anim+=rdt; acc+=gdt; let n=0; while (acc>=STEP && n<40){ step(STEP); acc-=STEP; n++; } if (n>=40) acc=0; }
+      moveShip(G.ship,gdt,3.2); if (G.trader.st==='coming'||G.trader.st==='leaving') moveShip(G.trader,gdt,2.6);
+      const pan=520*rdt/cam.z;
+      if (keys.has('arrowleft')||keys.has('a')) cam.x-=pan; if (keys.has('arrowright')||keys.has('d')) cam.x+=pan;
+      if (keys.has('arrowup')||keys.has('w')) cam.y-=pan; if (keys.has('arrowdown')||keys.has('s')) cam.y+=pan;
+      if (keys.size) clampCam();
+    }
+    if (G.dirty) recompute();
+    if (G.terrDirty) buildLand();
+    render(rt);
+    if (rt-lastUI>.25){ lastUI=rt; if (!G.demo){ updateTop(); updateGoals(); updateTools(); renderPanel(false); } drawMini(); }
+    if (!G.demo && rt-lastSave>60){ lastSave=rt; saveGame(); }
+  }
+  requestAnimationFrame(frame);
+}
+
+addEventListener('resize',resize);
+addEventListener('pagehide',saveGame);
+document.addEventListener('visibilitychange',()=>{ if (document.hidden) saveGame(); });
+
+function start(data){
+  resize();
+  if (data && data.save){ try{ boot(restore(data.save)); if (data.save.cam) Object.assign(cam,data.save.cam); overlay.hidden=true; setSpeed(data.speed??1); }catch(err){ console.error(err); demo(); } }
+  else demo();
+  requestAnimationFrame(frame);
+}
+function demo(){
+  boot(newState(48213,true));
+  cam.z=.8; const h=G.map.comps[G.map.home]; cam.x=isoX(h.cx,h.cy)-200; cam.y=isoY(h.cx,h.cy);
+  showMenu('start');
+}
+window.claude?.hot?.snapshot?.(()=>({ save: G && !G.demo ? serialize() : null, speed: G ? G.speed : 1 }));
+window.__salzwind = { get G(){ return G; }, place, step, recompute, setTool, select, startNew, saveGame, loadGame, cam, B };
+if (window.claude?.hot?.ready) window.claude.hot.ready(start); else start(window.claude?.hot?.data ?? {});
+})();
+</script>

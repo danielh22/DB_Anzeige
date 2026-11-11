@@ -66,3 +66,11 @@ Dann öffnet sich die Seite per Tippen im Vollbild, zeigt aber nichts direkt auf
 | `theme` | `dark` oder `light` |
 | `bg=transparent` | ohne Hintergrund |
 | `api` | alternative API-Basis-URL |
+
+## Salzwind (Spiel)
+
+Im Ordner [`salzwind/`](salzwind/index.html) liegt ein eigenständiges Insel-Aufbauspiel im Browser
+(eine einzige HTML-Datei, keine Abhängigkeiten): Mit dem Schiff ein Kontor gründen, Betriebe über
+Straßen anbinden, Produktionsketten aufbauen (Wolle → Stoff, Getreide → Mehl → Brot, Erz → Werkzeug)
+und Pioniere zu Siedlern und Bürgern aufsteigen lassen. Mit GitHub Pages erreichbar unter
+`https://<user>.github.io/<repo>/salzwind/`. Spielstände werden im Browser gespeichert.
