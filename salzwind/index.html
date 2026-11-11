@@ -181,8 +181,9 @@ dd{margin:0;color:#d9d2c0}
   #mini{width:150px;height:84px}
   #goals{padding:10px 12px}
   #panel{left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));width:auto;top:auto;
-    bottom:calc(var(--buildH) + env(safe-area-inset-bottom,0px) + 10px);max-height:48%}
+    bottom:calc(var(--buildH) + env(safe-area-inset-bottom,0px) + 10px);max-height:40%}
   #hint{display:none}
+  .m-hide{display:none}
   .speed button{padding:6px 6px;min-width:26px}
   .ctrls{gap:5px}
 }
@@ -1522,7 +1523,7 @@ function render(rt){
   drawRoads(wx0,wx1,wy0,wy1);
   if (sel.kind==='b'){ const b=G.byId.get(sel.id); if (b){ const d=B[b.t]; footprintStroke(b.x,b.y,d.s,'#e3a948'); if (d.radius) radiusEll(b.x,b.y,d.s,d.radius,'rgba(227,169,72,.9)'); if (b.t==='holzfaeller') radiusEll(b.x,b.y,1,3.3,'rgba(160,220,140,.9)'); } }
   if (sel.kind==='ship'){ const s=G.ship; ctx.strokeStyle='rgba(227,169,72,.9)'; ctx.lineWidth=2; ctx.beginPath(); ctx.ellipse(isoX(s.x,s.y),isoY(s.x,s.y)+4,32,16,0,0,Math.PI*2); ctx.stroke();
-    if (s.path.length){ ctx.setLineDash([4,6]); ctx.beginPath(); ctx.moveTo(isoX(s.x,s.y),isoY(s.x,s.y)); for (const [x,y] of s.path) ctx.lineTo(isoX(x,y),isoY(x,y)); ctx.stroke(); ctx.setLineDash([]); } }
+    if (s.path.length){ const [ex,ey]=s.path[s.path.length-1]; ctx.beginPath(); ctx.ellipse(isoX(ex,ey),isoY(ex,ey),12,6,0,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([4,6]); ctx.beginPath(); ctx.moveTo(isoX(s.x,s.y),isoY(s.x,s.y)); for (const [x,y] of s.path) ctx.lineTo(isoX(x,y),isoY(x,y)); ctx.stroke(); ctx.setLineDash([]); } }
   // objects, back to front
   const objs=[];
   for (let y=0;y<N;y++) for (let x=0;x<N;x++){
@@ -1691,7 +1692,7 @@ cv.addEventListener('pointerdown',e=>{
   ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if (ptrs.size===2){ const [a,b]=[...ptrs.values()]; pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,z:cam.z,mx:(a.x+b.x)/2,my:(a.y+b.y)/2,cx:cam.x,cy:cam.y}; drag=null; paintTiles=null; return; }
   const alt = e.button===2||e.button===1;
-  drag={ sx:e.clientX, sy:e.clientY, cx:cam.x, cy:cam.y, start:tileAt(e.clientX,e.clientY), moved:false, pan: alt || !tool || !PAINT.has(tool), button:e.button };
+  drag={ touch:e.pointerType==='touch', sx:e.clientX, sy:e.clientY, cx:cam.x, cy:cam.y, start:tileAt(e.clientX,e.clientY), moved:false, pan: alt || !tool || !PAINT.has(tool), button:e.button };
 });
 cv.addEventListener('pointermove',e=>{
   if (!G) return;
@@ -1701,7 +1702,7 @@ cv.addEventListener('pointermove',e=>{
     const wx=(pinch.mx-W/2)/pinch.z+pinch.cx, wy=(pinch.my-H/2)/pinch.z+pinch.cy; cam.z=Math.max(.4,Math.min(2.2,pinch.z*d/pinch.d)); cam.x=wx-(mx-W/2)/cam.z; cam.y=wy-(my-H/2)/cam.z; clampCam(); return; }
   if (!drag) return;
   const dx=e.clientX-drag.sx, dy=e.clientY-drag.sy;
-  if (!drag.moved && Math.hypot(dx,dy)>6){ drag.moved=true; if (drag.pan) cv.classList.add('panning'); }
+  if (!drag.moved && Math.hypot(dx,dy)>(drag.touch?14:6)){ drag.moved=true; if (drag.pan) cv.classList.add('panning'); }
   if (!drag.moved) return;
   if (drag.pan){ cam.x=drag.cx-dx/cam.z; cam.y=drag.cy-dy/cam.z; clampCam(); }
   else paintTiles = paintSet(drag.start, hover);
@@ -1740,6 +1741,7 @@ function applyPaint(tiles){
 }
 function clickAt(h){
   const {tx,ty}=h;
+  if (tool==='kontor' && inB(tx,ty) && nav(ty*N+tx)){ sailTo(tx,ty,h); return; }
   if (tool){
     if (tool==='abriss'){ demolishAt(tx,ty); return; }
     if (PAINT.has(tool)){ applyPaint([[tx,ty]]); return; }
@@ -1753,11 +1755,26 @@ function clickAt(h){
   if (Math.hypot(h.sx-sp[0],h.sy-sp[1])<34*cam.z+6){ select({kind:'ship'}); return; }
   if (G.trader.st!=='away'){ const tp=[(isoX(G.trader.x,G.trader.y)-cam.x)*cam.z+W/2,(isoY(G.trader.x,G.trader.y)-15-cam.y)*cam.z+H/2]; if (Math.hypot(h.sx-tp[0],h.sy-tp[1])<34*cam.z+6){ select({kind:'trade'}); return; } }
   if (inB(tx,ty) && G.occ[ty*N+tx]){ select({kind:'b',id:G.occ[ty*N+tx]}); return; }
-  if (sel.kind==='ship' && inB(tx,ty) && nav(ty*N+tx)){
-    const p=shipPath(G.ship.x,G.ship.y,tx,ty); if (p){ G.ship.path=p; } else toast('Dorthin findet dein Schiff keinen Weg.','warn');
-    return;
-  }
+  if (sel.kind==='ship'){ sailTo(tx,ty,h); return; }
   select(null);
+}
+// sail to the tapped tile, or to the closest water tile when the tap landed on the shore or off the map
+function sailTo(tx,ty,h){
+  let best=null, bd=1e9;
+  const cx=Math.max(0,Math.min(N-1,tx)), cy=Math.max(0,Math.min(N-1,ty));
+  for (let y=cy-2;y<=cy+2;y++) for (let x=cx-2;x<=cx+2;x++){
+    if (!inB(x,y) || !nav(y*N+x)) continue;
+    const d=Math.hypot(x+.5-h.fx,y+.5-h.fy); if (d<bd){ bd=d; best=[x,y]; } }
+  if (!best){ toast('Tippe aufs Wasser, um dorthin zu segeln.','warn'); return; }
+  const p=shipPath(G.ship.x,G.ship.y,best[0],best[1]);
+  if (p && p.length){ G.ship.path=p; } else if (!p) toast('Dorthin findet dein Schiff keinen Weg.','warn');
+}
+// on phones the info sheet covers the lower screen half: keep the ship in the free area above it
+function focusShip(){
+  if (innerWidth>760 || panel.hidden || !G) return;
+  const topY=$('#top').getBoundingClientRect().bottom, gl=goalsEl.hidden?topY:goalsEl.getBoundingClientRect().bottom;
+  const pTop=panel.getBoundingClientRect().top, midY=(Math.max(topY,gl)+pTop)/2;
+  cam.x=isoX(G.ship.x,G.ship.y); cam.y=isoY(G.ship.x,G.ship.y)-(midY-H/2)/cam.z; clampCam();
 }
 const keys=new Set();
 addEventListener('keydown',e=>{
@@ -1847,6 +1864,7 @@ function select(s){
   if (!s){ sel.kind=null; sel.id=0; } else { sel.kind=s.kind; sel.id=s.id||0; }
   if (s && tool && s.kind!=='ship') setTool(null);
   renderPanel(true);
+  if (s && s.kind==='ship') focusShip();
 }
 // panel content is rebuilt while the game runs, so act on pointerdown; click covers keyboard activation
 panel.addEventListener('pointerdown',e=>{ if (e.button!==0) return; const b=e.target.closest('[data-act]'); if (!b || b.disabled) return; e.preventDefault(); act(b.dataset.act); });
@@ -1922,9 +1940,9 @@ function renderPanel(force){
     for (const c of G.map.comps){ for (const j of c.tiles){ const d=Math.hypot(j%N+.5-s.x,((j/N)|0)+.5-s.y); if (d<nd){ nd=d; near=c; } } }
     const nearIsle = nd<=8 ? near : null;
     sig=['ship',nearIsle&&nearIsle.id,G.founded,s.moving].join('|');
-    html=head('Brise',s.moving?'Segelt …':'Liegt vor Anker')+
-      `<div class="sec"><p class="note">Klicke aufs Wasser, um zu segeln. Ein Kontor kannst du an jeder Küste bis 7 Felder vom Schiff entfernt gründen, eines pro Insel.</p></div>`+
-      (!G.founded?`<div class="sec"><h4>Laderaum</h4>${['holz','werkzeug','fisch'].map(g=>`<div class="row"><span class="l">${icon(g)}${GOODS[g].n}</span><span class="v">${Math.floor(G.stock[g])}</span></div>`).join('')}</div>`:'')+
+    html=head('Brise',s.moving?'Segelt …':(innerWidth<=760?'Tippe aufs Wasser, um zu segeln':'Liegt vor Anker'))+
+      `<div class="sec m-hide"><p class="note">Tippe oder klicke aufs Wasser, um zu segeln. Ein Kontor kannst du an jeder Küste bis 7 Felder vom Schiff entfernt gründen, eines pro Insel.</p></div>`+
+      (!G.founded?`<div class="sec m-hide"><h4>Laderaum</h4>${['holz','werkzeug','fisch'].map(g=>`<div class="row"><span class="l">${icon(g)}${GOODS[g].n}</span><span class="v">${Math.floor(G.stock[g])}</span></div>`).join('')}</div>`:'')+
       (nearIsle?`<div class="sec"><h4>Insel in Sicht: ${nearIsle.name}</h4><div><span class="pill ${nearIsle.tee?'ok':''}">Tee ${nearIsle.tee?'✓':'✕'}</span> <span class="pill ${nearIsle.ore?'ok':''}">Erz ${nearIsle.ore?'✓':'✕'}</span> <span class="pill ${nearIsle.mount?'ok':''}">Stein ${nearIsle.mount?'✓':'✕'}</span></div></div>`:'')+
       `<div class="sec"><div class="btns"><button class="btn primary" data-act="tool:kontor" type="button">Kontor gründen</button></div><p class="note">${G.founded?`Weitere Kontore kosten ${costHTML(B.kontor.cost)}`:'Dein erstes Kontor ist kostenlos.'}</p></div>`;
   } else if (sel.kind==='trade'){
