@@ -70,7 +70,8 @@ Dann öffnet sich die Seite per Tippen im Vollbild, zeigt aber nichts direkt auf
 ## Salzwind (Spiel)
 
 Im Ordner [`salzwind/`](salzwind/index.html) liegt ein eigenständiges Insel-Aufbauspiel im Browser
-(eine einzige HTML-Datei, keine Abhängigkeiten): Mit dem Schiff ein Kontor gründen, Betriebe über
-Straßen anbinden, Produktionsketten aufbauen (Wolle → Stoff, Getreide → Mehl → Brot, Erz → Werkzeug)
-und Pioniere zu Siedlern und Bürgern aufsteigen lassen. Mit GitHub Pages erreichbar unter
+(eine einzige HTML-Datei, keine Abhängigkeiten): Mit dem Schiff Kontore gründen, Betriebe über
+Straßen anbinden und 24 Waren in Produktionsketten herstellen, etwa Wolle → Stoff → Kleidung,
+Holz → Kohle und Erz → Eisen → Werkzeug, Ton → Ziegel, Hopfen → Bier, Trauben → Wein oder Gold → Schmuck.
+Die Bewohner steigen über fünf Stufen von Pionieren bis zu Aristokraten auf. Mit GitHub Pages erreichbar unter
 `https://<user>.github.io/<repo>/salzwind/`. Spielstände werden im Browser gespeichert.
