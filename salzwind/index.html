@@ -620,7 +620,7 @@ function newState(seed, demo, ver=2, n=MAP_N){
     treeEdits:new Map(), saplings:new Map(), oreRes:new Float32Array(N*N), fish:new Float32Array(N*N),
     ships:[], nextShip:1, trader:{ st:'away', tm:75, x:0, y:0, path:[], ang:0, isl:-1, disc:1 }, goal:0, unlocked:new Set(), allowUp:true,
     pop:0, popT:TIERS.map(()=>0), taxRate:0, upkeepRate:0, cnt:{}, hubIds:new Set(), dirty:true, terrDirty:true,
-    tierSeen:TIERS.map((_,i)=>i===0), warnT:{}, won:false, secAcc:0, anim:0, events:[], nextEvent:300, curIsle:-1,
+    tierSeen:TIERS.map((_,i)=>i===0), warnT:{}, won:false, secAcc:0, anim:0, events:[], nextEvent:600, curIsle:-1,
   };
   for (let i=0;i<N*N;i++){ if (map.ore[i]) g.oreRes[i]=ORE_MAX; else if (map.gold[i]) g.oreRes[i]=GOLD_MAX; if (map.T[i]<=2) g.fish[i]=1; }
   // ship near home
@@ -1088,7 +1088,7 @@ function eventsTick(dt){
     }
   }
   G.nextEvent-=dt;
-  if (G.nextEvent<=0){ G.nextEvent=150+Math.random()*150; if (G.pop>=30) triggerEvent(); }
+  if (G.nextEvent<=0){ G.nextEvent=600+Math.random()*300; if (G.pop>=30) triggerEvent(); }
 }
 function triggerEvent(){
   const built=G.buildings.filter(b=>!(b.build<1)), houses=built.filter(b=>b.t==='haus'), farms=built.filter(b=>FARMS.has(b.t)), fishers=built.filter(b=>b.t==='fischer');
@@ -3320,7 +3320,7 @@ function restore(s){
     for (const b of g.buildings) if (b.t==='kontor'){ g.stores[b.isl]=g.stores[b.isl]||emptyGoods(); g.sup[b.isl]=Object.assign(fullSup(),s.sup||{}); }
   }
   for (const b of g.buildings) if (b.t==='kontor' && !g.stores[b.isl]) g.stores[b.isl]=emptyGoods();
-  g.events=s.events||[]; g.nextEvent=s.nextEvent??300;
+  g.events=s.events||[]; g.nextEvent=Math.max(s.nextEvent??600,600);
   g.trader.tm=s.trader?s.trader.tm:120;
   return g;
 }
