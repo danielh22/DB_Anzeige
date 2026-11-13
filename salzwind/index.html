@@ -235,7 +235,7 @@ dd{margin:0;color:#d9d2c0}
 'use strict';
 (() => {
 // ============================================================ constants
-const N = 80, HW = 32, HH = 16;
+let N = 128; const HW = 32, HH = 16;
 const $ = s => document.querySelector(s);
 const D4 = [[1,0],[-1,0],[0,1],[0,-1]];
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -371,7 +371,7 @@ const GOALS = [
 const ISLE_NAMES = ['Möwenfels','Sturmhuk','Tangholm','Bernsteinkap','Nebelau','Kaperriff','Muschelgrund','Ostwacht','Salzhorn','Lotsenholm','Krähennest','Windbruch','Ankergrund','Robbenwatt'];
 
 // ============================================================ map generation
-function genMap(seed){
+function genMapV1(seed){
   const rnd = mulberry32(seed);
   const L = new Uint8Array(N*N);
   const centers = [{ x:N*.5+(rnd()-.5)*8, y:N*.5+(rnd()-.5)*8, r:12.5 }];
@@ -457,6 +457,134 @@ function bfsDist(L, landVal, out){
     for (const [dx,dy] of D4){ const nx=x+dx, ny=y+dy; if(nx<0||ny<0||nx>=N||ny>=N) continue; const k=ny*N+nx; if(out[k]===255){ out[k]=Math.min(254,out[j]+1); q.push(k);} } }
 }
 
+// ============================================================ map generation v2: larger sea, climate zones, varied island shapes
+const MAP_N = 128;
+const BIOMES = {
+  gemaessigt:{ n:'Gemäßigt', warm:.5, code:0, tree:.5, conifer:.45 },
+  nordisch:{ n:'Nordisch', warm:0, code:0, tree:.43, conifer:.85 },
+  tropisch:{ n:'Tropisch', warm:1, code:0, tree:.46, palm:.6 },
+  heide:{ n:'Heide', warm:.68, code:.5, tree:.64, conifer:.25, olive:.55 },
+  vulkan:{ n:'Vulkanisch', warm:.62, code:1, tree:.56, conifer:.3 },
+};
+const BIOME_NAMES = {
+  nordisch:['Eisklippe','Fjordhavn','Bärenholm','Graufels','Rabeninsel','Nebelau','Sturmhuk','Frostkamm'],
+  tropisch:['Palmenriff','Korallengrund','Kokosstrand','Sonnenbucht','Muschelgrund','Bernsteinkap','Lagunenhof','Papageienriff'],
+  vulkan:['Glutberg','Schwefelkap','Aschenhorn','Feuerfels','Rauchkuppe'],
+  heide:['Heidkamp','Dünenhorst','Ginsterau','Windrose','Sandwehr'],
+  gemaessigt:['Möwenfels','Tangholm','Kaperriff','Ostwacht','Salzhorn','Lotsenholm','Krähennest','Windbruch','Ankergrund','Robbenwatt','Leuchtturmkap','Hummerbank','Seehundsbank','Wellenbrecher'],
+};
+function genMapV2(seed){
+  const rnd = mulberry32(seed^0x5a17c3);
+  const L = new Uint8Array(N*N), own2 = new Int16Array(N*N).fill(-1);
+  const pickBiome=t=>{ const r=rnd();
+    if (t<.32) return r<.6?'nordisch':r<.8?'gemaessigt':r<.9?'vulkan':'heide';
+    if (t>.68) return r<.6?'tropisch':r<.8?'vulkan':r<.9?'heide':'gemaessigt';
+    return r<.45?'gemaessigt':r<.65?'heide':r<.8?'tropisch':r<.9?'nordisch':'vulkan'; };
+  const mk=(x,y,r,type,biome)=>{
+    const c={ x, y, r, type, biome, ang:rnd()*Math.PI, ax:1.3+rnd()*.6, amp:type==='jagged'?1.15:.5+rnd()*.35, lake:null, subs:null };
+    if (type==='cluster'){ c.subs=[]; const n=3+Math.floor(rnd()*3); for (let k=0;k<n;k++){ const a=rnd()*6.28, d=rnd()*r*.7; c.subs.push({ x:x+Math.cos(a)*d, y:y+Math.sin(a)*d, r:r*(.3+rnd()*.25) }); } }
+    if ((type==='round'||type==='ellipse'||type==='jagged') && r>=10 && rnd()<.5){ const a=rnd()*6.28, d=r*(.15+rnd()*.25); c.lake={ x:x+Math.cos(a)*d, y:y+Math.sin(a)*d, r:1.4+rnd()*1.4 }; }
+    return c; };
+  const home=mk(N*.5+(rnd()-.5)*10, N*.5+(rnd()-.5)*10, 13.5, rnd()<.5?'round':'ellipse', 'gemaessigt'); home.lake=null; home.amp=.7; home.ax=Math.min(home.ax,1.45);
+  const C=[home], want=Math.round(23*(N*N)/(128*128));
+  const TYPES=['round','ellipse','ellipse','crescent','atoll','cluster','jagged','jagged','round'];
+  const reachOf=c=>c.r*(c.type==='ellipse'?1.6:1.05);
+  for (let k=0;k<4000 && C.length<want;k++){
+    const big=rnd()<.14, r=big?14+rnd()*5:4.5+rnd()*8.5, x=5+r+rnd()*(N-10-2*r), y=5+r+rnd()*(N-10-2*r);
+    let type=TYPES[Math.floor(rnd()*TYPES.length)]; if (type==='atoll'&&r<7) type='round'; if (type==='cluster'&&r<8) type='jagged';
+    const c=mk(x,y,r,type,pickBiome((x+y)/(2*N)));
+    if (!C.every(o=>Math.hypot(o.x-x,o.y-y) > reachOf(o)+reachOf(c)+4)) continue;
+    C.push(c);
+  }
+  const val=(c,x,y)=>{ const dx=x-c.x, dy=y-c.y, ca=Math.cos(c.ang), sa=Math.sin(c.ang), lx=dx*ca+dy*sa, ly=-dx*sa+dy*ca;
+    switch (c.type){
+      case 'ellipse': return 1-Math.hypot(lx/(c.r*c.ax), ly/(c.r/c.ax*1.15));
+      case 'crescent': return Math.min(1-Math.hypot(lx,ly)/c.r, (Math.hypot(lx-c.r*.55,ly)/(c.r*.7)-1)*1.4);
+      case 'atoll': return .34-Math.abs(Math.hypot(lx,ly)/c.r-.72)*1.25;
+      case 'cluster': { let v=-1; for (const s of c.subs) v=Math.max(v,1-Math.hypot(x-s.x,y-s.y)/s.r); return v; }
+      default: return 1-Math.hypot(dx,dy)/c.r;
+    } };
+  for (let y=0;y<N;y++) for (let x=0;x<N;x++){
+    const n=fbm(x*.14,y*.14,seed)-.5, n2=fbm(x*.3,y*.3,seed+77)-.5;
+    let best=-9, bi=-1;
+    for (let k=0;k<C.length;k++){ const c=C[k], rr=reachOf(c)*1.6+3; if (Math.abs(x-c.x)>rr||Math.abs(y-c.y)>rr) continue;
+      const v=val(c,x,y)+n*c.amp*.75+(c.type==='jagged'?n2*.55:0); if (v>best){ best=v; bi=k; } }
+    if (best>.12 && x>2 && y>2 && x<N-3 && y<N-3){
+      const c=C[bi]; if (c.lake && Math.hypot(x-c.lake.x,y-c.lake.y)<c.lake.r+n*1.2) continue;
+      L[y*N+x]=1; own2[y*N+x]=bi; }
+  }
+  const isl=new Int16Array(N*N).fill(-1), seen=new Uint8Array(N*N), comps=[];
+  for (let i=0;i<N*N;i++){
+    if (!L[i]||seen[i]) continue;
+    const tiles=[], st=[i]; seen[i]=1;
+    while (st.length){ const j=st.pop(); tiles.push(j); const x=j%N, y=(j/N)|0;
+      for (const [dx,dy] of D4){ const nx=x+dx, ny=y+dy; if (nx<0||ny<0||nx>=N||ny>=N) continue; const q=ny*N+nx; if (L[q]&&!seen[q]){ seen[q]=1; st.push(q); } } }
+    if (tiles.length<14){ for (const j of tiles) L[j]=0; continue; }
+    const id=comps.length, votes={}; let sx=0, sy=0;
+    for (const j of tiles){ isl[j]=id; sx+=j%N; sy+=(j/N)|0; const b=C[own2[j]].biome; votes[b]=(votes[b]||0)+1; }
+    const biome=Object.keys(votes).sort((a,b)=>votes[b]-votes[a])[0];
+    comps.push({ id, tiles, cx:sx/tiles.length+.5, cy:sy/tiles.length+.5, biome, shape:C[own2[tiles[0]]].type });
+  }
+  const dist=new Uint8Array(N*N), wd=new Uint8Array(N*N);
+  bfsDist(L,1,dist); bfsDist(L,0,wd);
+  const hi=Math.round(home.y)*N+Math.round(home.x);
+  let homeC = isl[hi]>=0 ? comps[isl[hi]] : comps.slice().sort((a,b)=>Math.hypot(a.cx-home.x,a.cy-home.y)-Math.hypot(b.cx-home.x,b.cy-home.y))[0];
+  homeC.biome='gemaessigt';
+  const pools={}; for (const k in BIOME_NAMES) pools[k]=BIOME_NAMES[k].slice().sort(()=>rnd()-.5);
+  const used=new Set();
+  for (const c of comps){ let nm=pools[c.biome].shift() || pools.gemaessigt.shift(); if (!nm) nm='Insel '+(c.id+1); if (used.has(nm)) nm+=' II'; used.add(nm); c.name=nm;
+    c.home=c===homeC; c.tee=c.wein=c.ore=c.gold=false; c.mount=false; }
+  const others=comps.filter(c=>c!==homeC);
+  for (const c of others){ const B=c.biome;
+    c.tee = B==='tropisch' ? rnd()<.85 : B==='gemaessigt' ? rnd()<.2 : B==='vulkan' ? rnd()<.4 : false;
+    c.wein = (B==='gemaessigt'||B==='heide') ? rnd()<.55 : B==='vulkan' ? rnd()<.35 : false;
+    c.ore = B==='nordisch' ? rnd()<.75 : B==='vulkan' ? rnd()<.7 : rnd()<.22;
+    c.mount = c.ore || B==='nordisch' || B==='vulkan' || (c.tiles.length>50 && rnd()<.5); }
+  homeC.mount=true;
+  const ensure=(key,pref)=>{ if (others.some(c=>c[key])) return; const c=others.find(o=>pref.includes(o.biome))||others[0]; if (c){ c[key]=true; if (key==='ore') c.mount=true; } };
+  ensure('tee',['tropisch','vulkan']); ensure('wein',['gemaessigt','heide']); ensure('ore',['nordisch','vulkan']);
+  const T=new Uint8Array(N*N), ore=new Uint8Array(N*N), gold=new Uint8Array(N*N), tree=new Uint8Array(N*N), shade=new Uint8Array(N*N);
+  for (const c of comps){
+    if (!c.mount) continue;
+    const inner=c.tiles.filter(j=>dist[j]>=2).sort((a,b)=>dist[b]-dist[a]||hash2(a,b,seed)-.5);
+    if (!inner.length){ c.mount=false; c.ore=false; continue; }
+    const frac = c.biome==='vulkan'?.2 : c.biome==='nordisch'?.12 : .07;
+    const wantM=Math.max(3,Math.round(c.tiles.length*frac)), s0=inner[0], m=new Set([s0]);
+    if (c.biome==='vulkan'){ const sx=s0%N, sy=(s0/N)|0; inner.slice().sort((a,b)=>Math.hypot(a%N-sx,((a/N)|0)-sy)-Math.hypot(b%N-sx,((b/N)|0)-sy)).slice(0,wantM).forEach(j=>m.add(j)); }
+    else { const front=[s0];
+      while (m.size<wantM && front.length){ const k=Math.floor(rnd()*front.length), j=front[k], x=j%N, y=(j/N)|0; let grew=false;
+        for (const [dx,dy] of D4.slice().sort(()=>rnd()-.5)){ const q=(y+dy)*N+x+dx; if (L[q]&&dist[q]>=2&&!m.has(q)){ m.add(q); front.push(q); grew=true; break; } }
+        if (!grew) front.splice(k,1); } }
+    for (const j of m) T[j]=5;
+    if (c.ore){ const edge=[...m].filter(j=>D4.some(([dx,dy])=>{ const q=j+dy*N+dx; return L[q]&&!m.has(q); })).sort(()=>rnd()-.5);
+      for (let k=0;k<Math.min(Math.max(2,Math.ceil(m.size*.4)),edge.length);k++) ore[edge[k]]=1; }
+  }
+  let gc=others.filter(c=>c.mount&&(c.biome==='vulkan'||c.biome==='nordisch')); if (!gc.length) gc=others.filter(c=>c.mount); if (!gc.length) gc=[homeC];
+  gc.sort(()=>rnd()-.5).slice(0,Math.max(2,Math.floor(gc.length/3))).forEach(c=>{
+    const mt=c.tiles.filter(j=>T[j]===5 && !ore[j] && D4.some(([dx,dy])=>{ const q=j+dy*N+dx; return L[q]&&T[q]!==5; }));
+    mt.sort(()=>rnd()-.5).slice(0,Math.max(2,Math.ceil(mt.length*.35))).forEach(j=>{ gold[j]=1; }); if (mt.length) c.gold=true; });
+  for (let i=0;i<N*N;i++){
+    const x=i%N, y=(i/N)|0;
+    shade[i]=Math.floor(hash2(x,y,seed+5)*4);
+    if (!L[i]){ T[i]=wd[i]<=1?1:wd[i]===2?2:0; continue; }
+    if (T[i]===5) continue;
+    T[i]=dist[i]<=1?3:4;
+    if (T[i]===4 && fbm(x*.21,y*.21,seed+99)>BIOMES[comps[isl[i]].biome].tree) tree[i]=1+Math.floor(hash2(x,y,seed+3)*200);
+  }
+  return { seed, ver:2, T, isl, ore, gold, tree, shade, dist, wd, comps, home:homeC.id };
+}
+// shared after-processing: nearest island for every tile (lets water near a coast take on that island's climate colours)
+function finishMap(M,ver){
+  if (ver!==2) for (const c of M.comps) c.biome = c.tee ? 'tropisch' : 'gemaessigt';
+  M.ver=ver;
+  const near=new Int16Array(N*N).fill(-1), q=[];
+  for (let i=0;i<N*N;i++) if (M.isl[i]>=0){ near[i]=M.isl[i]; q.push(i); }
+  for (let h=0;h<q.length;h++){ const i=q[h], x=i%N, y=(i/N)|0;
+    for (const [dx,dy] of D4){ const nx=x+dx, ny=y+dy; if (nx<0||ny<0||nx>=N||ny>=N) continue; const j=ny*N+nx; if (near[j]<0){ near[j]=near[i]; q.push(j); } } }
+  M.near=near;
+  return M;
+}
+
 // ============================================================ state
 let G = null;
 let own, conn; const cov={};
@@ -465,8 +593,9 @@ let tool = null;
 const cam = { x:0, y:N*HH, z:1 };
 
 function freshGrids(){ own=new Uint8Array(N*N); conn=new Uint8Array(N*N); for (const k of SVC) cov[k]=new Uint8Array(N*N); }
-function newState(seed, demo){
-  const map = genMap(seed);
+function newState(seed, demo, ver=2, n=MAP_N){
+  N = ver===1 ? 80 : n;
+  const map = finishMap(ver===1 ? genMapV1(seed) : genMapV2(seed), ver);
   const g = {
     seed, map, demo:!!demo, t:0, gold:2500, stock:{}, sup:{}, made:{}, founded:false, speed:1, lastSpeed:1,
     buildings:[], byId:new Map(), nextId:1, road:new Uint8Array(N*N), occ:new Int32Array(N*N), cut:[],
@@ -1520,7 +1649,7 @@ function treeSprite(kind,ci){
         c.fillStyle='rgba(200,240,180,.12)'; c.beginPath(); c.moveTo(0,ty); c.lineTo(-w*.55,by-1); c.lineTo(-w*.1,by-2); c.closePath(); c.fill(); }
       for (let k=0;k<14;k++){ const y=-38+r()*30, x=(r()-.5)*(y+44)*.45; E(c,x,y,.7,.5,r()<.5?'rgba(140,200,140,.35)':'rgba(10,30,15,.35)'); }
     } else {
-      const pal = kind==='autumn' ? ['#9a5a22','#c97f2e','#e7b052'] : [['#356b2c','#4e8c3a','#7ab55a'],['#3c7330','#58963d','#88c062'],['#2f6234','#4a8448','#78b468']][ci];
+      const pal = kind==='autumn' ? ['#9a5a22','#c97f2e','#e7b052'] : kind==='olive' ? ['#4f5a32','#6e7a44','#a3ab72'] : [['#356b2c','#4e8c3a','#7ab55a'],['#3c7330','#58963d','#88c062'],['#2f6234','#4a8448','#78b468']][ci];
       const blobs=[[-6,-15,7.6],[6,-16,7.6],[0,-24,8.2],[-4,-21,6],[5,-22,6.2],[1,-12,6]];
       for (const [bx,by,br] of blobs){ const g=c.createRadialGradient(bx-br*.35,by-br*.45,br*.1,bx,by,br*1.05); g.addColorStop(0,pal[2]); g.addColorStop(.55,pal[1]); g.addColorStop(1,pal[0]); c.fillStyle=g; c.beginPath(); c.arc(bx,by,br,0,Math.PI*2); c.fill(); }
       for (let k=0;k<40;k++){ const a=r()*6.28, d=r()*13, x=Math.cos(a)*d, y=-18+Math.sin(a)*d*.85; const lit=x+y<-18; E(c,x,y,.9,.7,lit?'rgba(220,255,180,.28)':'rgba(10,35,10,.25)'); }
@@ -1561,13 +1690,13 @@ function cloudSprite(i){
 }
 let RT=0;
 function drawTreeS(c,x,y,v){
-  const cx=isoX(x,y), cy=isoY(x,y)+HH, M=G.map, tee=M.comps[M.isl[y*N+x]]?.tee;
+  const cx=isoX(x,y), cy=isoY(x,y)+HH, M=G.map, comp=M.comps[M.isl[y*N+x]], bio=(comp&&BIOMES[comp.biome])||BIOMES.gemaessigt;
   const n = 1 + (v%3===0?0:1) + (v%5===0?1:0);
   const spots=[];
   for (let k=0;k<n;k++) spots.push([(hash2(x,y,40+k)-.5)*30,(hash2(x,y,50+k)-.5)*12, .82+hash2(x,y,60+k)*.4, hash2(x,y,61+k)]);
   spots.sort((a,b)=>a[1]-b[1]);
   for (const [ox,oy,s,hk] of spots){
-    const kind = tee ? (hk<.55?'palm':'leaf') : v%11===0 ? 'autumn' : hk<.45 ? 'conifer' : 'leaf';
+    const kind = bio.palm ? (hk<bio.palm?'palm':'leaf') : v%11===0 && (bio===BIOMES.gemaessigt||bio===BIOMES.heide) ? 'autumn' : bio.olive && hk>1-bio.olive ? 'olive' : hk<(bio.conifer??.45) ? 'conifer' : 'leaf';
     const tsp=treeSprite(kind,v%3), bx=cx+ox, by=cy+oy, sk=RM?0:(Math.sin(RT*1.25+x*.7+y*1.3+ox*.1)+.5*Math.sin(RT*2.1+x))*(kind==='palm'?.045:.028);
     if (sk){ c.transform(1,0,sk,1,-sk*by,0); blit(tsp,bx,by,s); c.transform(1,0,-sk,1,sk*by,0); } else blit(tsp,bx,by,s);
   }
@@ -1619,7 +1748,7 @@ function drawShip(c,s,kind,t){
 // so trees and buildings around it still sort correctly in front of or behind the mountain.
 let MT=new Map();
 function buildMountains(){
-  const M=G.map, R=5, S=matchMedia('(pointer: coarse)').matches?1.6:2.2;
+  const M=G.map, R=5, S=matchMedia('(pointer: coarse)').matches?1.3:1.8;
   MT=new Map();
   const isM=(x,y)=>inB(x,y)&&M.T[y*N+x]===5;
   const VW=N*R+1, HV=new Float32Array(VW*VW).fill(-1);
@@ -1632,13 +1761,14 @@ function buildMountains(){
     let h=0;
     if (e>0){ const shape=1-Math.exp(-1.1*e), edge=Math.min(1,e), sm=edge*edge*(3-2*edge);
       const rn=fbm(fx*.8,fy*.8,M.seed+303), ridge=1-Math.abs(2*fbm(fx*1.6,fy*1.6,M.seed+404)-1);
-      h=Math.min(92,((12+58*shape)*(.74+.52*rn)+ridge*15*shape)*sm); }
+      h=Math.min(100,((12+58*shape)*(.74+.52*rn)+ridge*15*shape)*sm); }
     HV[k]=h; return h; };
   const Ld=(()=>{ const v=[-.62,-.2,.76], l=Math.hypot(...v); return v.map(q=>q/l); })();
-  const rockL=[182,176,162], rockD=[146,139,125], meadow=[128,132,104], snow=[246,245,240];
+  const PAL={ vulkan:{L:[112,102,98],D:[70,64,62],m:[96,104,80],snow:999,ember:true}, nordisch:{L:[176,178,176],D:[132,134,134],m:[112,124,104],snow:44}, tropisch:{L:[176,168,150],D:[138,130,114],m:[104,138,80],snow:80}, heide:{L:[186,170,146],D:[150,134,112],m:[150,140,100],snow:66} }, DEF={L:[182,176,162],D:[146,139,125],m:[128,132,104],snow:58}, snow=[246,245,240];
   const mix=(p,q,t)=>[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t,p[2]+(q[2]-p[2])*t];
   for (let ty=0;ty<N;ty++) for (let tx=0;tx<N;tx++){
     if (!isM(tx,ty)) continue;
+    const tb=M.comps[M.isl[ty*N+tx]]?.biome, pal=PAL[tb]||DEF, rockL=pal.L, rockD=pal.D, meadow=pal.m;
     const V=[]; let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
     for (let j=0;j<=R;j++) for (let i=0;i<=R;i++){
       const gx=tx*R+i, gy=ty*R+j, h=hv(gx,gy), X=gx/R, Y=gy/R, sx=isoX(X,Y), sy=isoY(X,Y)-h;
@@ -1654,7 +1784,8 @@ function buildMountains(){
       const hm=(a[4]+b[4]+d[4])/3, jit=hash2(seedk,tx*31+ty,M.seed);
       let col=mix(rockL,rockD,Math.min(1,(1-nz)*1.6+jit*.25));
       if (hm<16) col=mix(meadow,col,hm/16);
-      if (hm>58+jit*14 && nz>.5) col=mix(col,snow,Math.min(1,(hm-58-jit*14)/10+.4));
+      if (hm>pal.snow+jit*14 && nz>.5) col=mix(col,snow,Math.min(1,(hm-pal.snow-jit*14)/10+.4));
+      if (pal.ember && hm>62) col=mix(col,[214,96,48],Math.min(.75,(hm-62)/16));
       const lit=.64+.5*Math.max(0,nx*Ld[0]+ny*Ld[1]+nz*Ld[2]);
       const f=`rgb(${Math.min(255,col[0]*lit)|0},${Math.min(255,col[1]*lit)|0},${Math.min(255,col[2]*lit)|0})`;
       c.fillStyle=f; c.strokeStyle=f; c.lineWidth=.7; c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.lineTo(d[0],d[1]); c.closePath(); c.fill(); c.stroke();
@@ -1682,12 +1813,12 @@ precision highp float;
 precision mediump float;
 #endif
 uniform sampler2D uA; uniform sampler2D uB;
-uniform vec2 uRes; uniform vec2 uPix; uniform vec3 uCam; uniform float uDpr; uniform float uTime;
+uniform vec2 uRes; uniform vec2 uPix; uniform vec3 uCam; uniform float uDpr; uniform float uTime; uniform float uN;
 float hash(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
 float noise(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.0-2.0*f);
   return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),u.x),mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),u.x),u.y); }
 float fbm(vec2 p){ float v=0.0, a=0.5; for(int i=0;i<4;i++){ v+=a*noise(p); p=p*2.03+vec2(1.7,9.2); a*=0.5; } return v/0.9375; }
-vec4 smp(sampler2D t, vec2 f){ vec2 x=f-0.5; vec2 i=floor(x); vec2 r=fract(x); r=r*r*(3.0-2.0*r); return texture2D(t,(i+r+0.5)/80.0); }
+vec4 smp(sampler2D t, vec2 f){ vec2 x=f-0.5; vec2 i=floor(x); vec2 r=fract(x); r=r*r*(3.0-2.0*r); return texture2D(t,(i+r+0.5)/uN); }
 vec2 toTile(vec2 w){ return vec2((w.x/32.0+w.y/16.0)*0.5,(w.y/16.0-w.x/32.0)*0.5); }
 float landAt(vec2 f){ return smp(uA,f).r+(noise(f*2.1)-0.5)*0.26+(noise(f*5.3)-0.5)*0.1; }
 void main(){
@@ -1695,12 +1826,16 @@ void main(){
   vec2 w=(css-uRes*0.5)/uCam.z+uCam.xy;
   vec2 f=toTile(w);
   vec4 A=smp(uA,f); vec4 Bt=smp(uB,f);
+  float warm=Bt.g, code=Bt.a, dry=smoothstep(0.2,0.45,code)*(1.0-smoothstep(0.6,0.85,code)), volc=smoothstep(0.65,0.9,code);
   float land=A.r+(noise(f*2.1)-0.5)*0.26+(noise(f*5.3)-0.5)*0.1;
   vec3 col;
   if(land>0.5){
     float m=fbm(f*0.55);
-    vec3 grass=mix(vec3(0.40,0.60,0.26),vec3(0.56,0.72,0.33),m);
-    grass=mix(grass,vec3(0.67,0.75,0.31),Bt.g*0.75);
+    vec3 cold=vec3(0.30,0.47,0.33), mid=vec3(0.47,0.66,0.29), hot=vec3(0.62,0.76,0.29);
+    vec3 base=warm<0.5?mix(cold,mid,warm*2.0):mix(mid,hot,(warm-0.5)*2.0);
+    vec3 grass=mix(base*0.86,base*1.12,m);
+    grass=mix(grass,vec3(0.70,0.65,0.40),dry*0.7);
+    grass=mix(grass,vec3(0.30,0.40,0.22),volc*0.55);
     grass*=0.9+0.2*noise(w*0.22);
     grass*=1.0-0.09*step(0.8,noise(w*vec2(0.9,1.6)+3.0));
     grass+=vec3(0.05,0.06,0.0)*step(0.85,noise(w*0.7));
@@ -1709,10 +1844,13 @@ void main(){
     grass=mix(grass,mix(vec3(0.98,0.93,0.76),vec3(0.94,0.55,0.5),hash(floor(w*0.45)+3.0)),flower*0.85);
     vec3 forest=vec3(0.26,0.41,0.2)*(0.82+0.3*noise(w*0.18))*(0.9+0.2*m);
     grass=mix(grass,forest,smoothstep(0.25,0.75,A.b));
-    vec3 rock=vec3(0.53,0.5,0.44)*(0.82+0.3*noise(w*0.2));
+    vec3 rock=mix(vec3(0.53,0.5,0.44),vec3(0.28,0.25,0.24),volc*0.8)*(0.82+0.3*noise(w*0.2));
     grass=mix(grass,rock,smoothstep(0.3,0.7,A.a));
     vec3 sand=vec3(0.91,0.82,0.61)*(0.95+0.08*noise(w*0.35));
     sand*=0.97+0.03*sin(w.x*0.25+w.y*0.5+noise(w*0.04)*6.0);
+    sand=mix(sand,vec3(0.97,0.93,0.82),smoothstep(0.7,1.0,warm)*0.6);
+    sand=mix(sand,vec3(0.78,0.76,0.70),(1.0-smoothstep(0.0,0.3,warm))*0.6);
+    sand=mix(sand,vec3(0.32,0.30,0.30)*(0.9+0.2*noise(w*0.5)),volc*0.85);
     float wet=1.0-smoothstep(0.5,0.6,land);
     sand=mix(sand,sand*vec3(0.78,0.76,0.72),wet*0.85);
     float sandF=1.0-smoothstep(0.38,0.62,A.g+(fbm(f*2.4+7.0)-0.5)*0.35);
@@ -1728,7 +1866,7 @@ void main(){
       if(found==0.0 && landAt(toTile(w-vec2(0.0,float(k)*1.6)))>0.5) found=float(k);
     }
     if(found>0.0 && found<=4.0){
-      vec3 cc=vec3(0.6,0.5,0.35)*(0.82+0.28*noise(w*vec2(0.5,0.12)));
+      vec3 cc=mix(vec3(0.6,0.5,0.35),vec3(0.24,0.22,0.22),volc*0.85)*(0.82+0.28*noise(w*vec2(0.5,0.12)));
       col=cc*(1.0-found*0.08);
     } else {
       float depth=clamp(Bt.r+(noise(f*1.3)-0.5)*0.12,0.0,1.0);
@@ -1770,7 +1908,7 @@ function initGL(){
   const u=n=>gl.getUniformLocation(pr,n);
   gl.uniform1i(u('uA'),0); gl.uniform1i(u('uB'),1);
   glc.addEventListener('webglcontextlost',e=>{ e.preventDefault(); GLX=null; glc.hidden=true; if (G) buildLand(); });
-  return { gl, tA, tB, uRes:u('uRes'), uPix:u('uPix'), uCam:u('uCam'), uDpr:u('uDpr'), uTime:u('uTime') };
+  return { gl, tA, tB, uN:u('uN'), uRes:u('uRes'), uPix:u('uPix'), uCam:u('uCam'), uDpr:u('uDpr'), uTime:u('uTime') };
 }
 function uploadTerrain(){
   const { gl, tA, tB } = GLX, M=G.map;
@@ -1778,7 +1916,7 @@ function uploadTerrain(){
   for (let i=0;i<N*N;i++){
     const t=M.T[i], land=t>=3;
     a[i*4]=land?255:0; a[i*4+1]=(t===4||t===5)?255:0; a[i*4+2]=M.tree[i]?255:0; a[i*4+3]=t===5?255:0;
-    b[i*4]=land?0:Math.min(255,M.wd[i]*32); b[i*4+1]=land&&M.comps[M.isl[i]].tee?255:0; b[i*4+2]=land?Math.min(255,M.dist[i]*40):0; b[i*4+3]=M.ore[i]?255:0;
+    b[i*4]=land?0:Math.min(255,M.wd[i]*32); const bc=M.near&&M.near[i]>=0?BIOMES[M.comps[M.near[i]].biome]:BIOMES.gemaessigt; b[i*4+1]=Math.round(bc.warm*255); b[i*4+2]=land?Math.min(255,M.dist[i]*40):0; b[i*4+3]=Math.round(bc.code*255);
   }
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,tA); gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,N,N,0,gl.RGBA,gl.UNSIGNED_BYTE,a);
   gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D,tB); gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,N,N,0,gl.RGBA,gl.UNSIGNED_BYTE,b);
@@ -1793,7 +1931,7 @@ function drawGL(rt){
   const { gl } = GLX;
   gl.viewport(0,0,glc.width,glc.height);
   gl.uniform2f(GLX.uRes,W,H); gl.uniform2f(GLX.uPix,glc.width,glc.height); gl.uniform3f(GLX.uCam,cam.x,cam.y,cam.z);
-  gl.uniform1f(GLX.uDpr,glDpr); gl.uniform1f(GLX.uTime,RM?0:rt%900);
+  gl.uniform1f(GLX.uDpr,glDpr); gl.uniform1f(GLX.uN,N); gl.uniform1f(GLX.uTime,RM?0:rt%900);
   gl.drawArrays(gl.TRIANGLES,0,3);
 }
 
@@ -1825,7 +1963,7 @@ function buildStatic(){
   const r=mulberry32(G.seed+77); sparkles=[];
   for (let k=0;k<420;k++){ const x=r()*N, y=r()*N; const i=Math.floor(y)*N+Math.floor(x); if (M.T[i]===0) sparkles.push([isoX(x,y),isoY(x,y),r()*6.28,.6+r()*.8]); }
   labels = M.comps.map(c=>({ c, x:isoX(c.cx,c.cy), y:isoY(c.cx,c.cy) }));
-  walkers=[]; carriers=[]; deer=[]; coaches=[];
+  walkers=[]; carriers=[]; deer=[]; coaches=[]; makeClouds();
   buildMountains();
 }
 function buildLand(){
@@ -2196,7 +2334,8 @@ function resize(){
   sizeMini();
 }
 let hover=null, ghostWhy=null, paintTiles=null;
-const clouds=[]; { const r=mulberry32(5); for (let k=0;k<8;k++) clouds.push([r()*N*64-N*32, r()*N*32, 150+r()*170, 60+r()*60, 7+r()*8, k%3]); }
+const clouds=[];
+function makeClouds(){ clouds.length=0; const r=mulberry32(5); for (let k=0;k<Math.round(8*N/80);k++) clouds.push([r()*N*64-N*32, r()*N*32, 150+r()*170, 60+r()*60, 7+r()*8, k%3]); }
 
 function render(rt){
   const M=G.map, z=cam.z, t=rt, at=G.anim;
@@ -2236,7 +2375,11 @@ function render(rt){
     if (s.path.length){ const [ex,ey]=s.path[s.path.length-1]; ctx.beginPath(); ctx.ellipse(isoX(ex,ey),isoY(ex,ey),12,6,0,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([4,6]); ctx.beginPath(); ctx.moveTo(isoX(s.x,s.y),isoY(s.x,s.y)); for (const [x,y] of s.path) ctx.lineTo(isoX(x,y),isoY(x,y)); ctx.stroke(); ctx.setLineDash([]); } }
   // objects, back to front
   const objs=[];
-  for (let y=0;y<N;y++) for (let x=0;x<N;x++){
+  // walk only the visible diamond rows: a=x-y follows screen x, b=x+y follows screen y
+  const A0=Math.floor((wx0-70)/HW), A1=Math.ceil((wx1+70)/HW), B0=Math.max(0,Math.floor((wy0-90)/HH)), B1=Math.min(2*N-2,Math.ceil((wy1+20)/HH));
+  for (let bb=B0; bb<=B1; bb++) for (let aa=A0; aa<=A1; aa++){
+    if ((aa+bb)&1) continue;
+    const x=(aa+bb)>>1, y=(bb-aa)>>1; if (x<0||y<0||x>=N||y>=N) continue;
     const i=y*N+x, sx=(x-y)*HW, sy=(x+y)*HH;
     if (sx<wx0-70||sx>wx1+70||sy<wy0-20||sy>wy1+90) continue;
     if (M.T[i]===5) objs.push([x+y+1,0,x,y]);
@@ -2301,7 +2444,7 @@ function render(rt){
     for (const L of labels){
       const sx=(L.x-cam.x)*z+W/2, sy=(L.y-cam.y)*z+H/2-30*z;
       if (sx<-100||sx>W+100||sy<-40||sy>H+40) continue;
-      const c=L.c, ex=[c.tee&&'Tee',c.wein&&'Wein',c.ore&&'Erz',c.gold&&'Gold',c.mount&&'Stein'].filter(Boolean).join(' · ')||'keine Bodenschätze';
+      const c=L.c, ex=[BIOMES[c.biome]?.n,c.tee&&'Tee',c.wein&&'Wein',c.ore&&'Erz',c.gold&&'Gold',c.mount&&'Stein'].filter(Boolean).join(' · ')||'keine Bodenschätze';
       ctx.globalAlpha=la;
       ctx.font='700 15px "Bricolage Grotesque", sans-serif'; ctx.lineWidth=4; ctx.strokeStyle='rgba(13,24,32,.55)'; ctx.strokeText(c.name,sx,sy); ctx.fillStyle='#f6efe0'; ctx.fillText(c.name,sx,sy);
       ctx.font='600 11px Figtree, sans-serif'; ctx.strokeText(ex,sx,sy+15); ctx.fillStyle='#e8c98d'; ctx.fillText(ex,sx,sy+15);
@@ -2387,7 +2530,7 @@ function drawMini(){
     miniBase=document.createElement('canvas'); miniBase.width=MW*dpr; miniBase.height=MH*dpr;
     const c=miniBase.getContext('2d'); c.scale(dpr,dpr);
     for (let i=0;i<N*N;i++){ const t=G.map.T[i]; if (t===0) continue; const x=i%N, y=(i/N)|0;
-      c.fillStyle = t===1?'rgba(120,206,204,.55)':t===2?'rgba(84,178,186,.3)':t===3?'#e2cf9a':t===5?'#9a9484':G.map.tree[i]?'#5d8c42':G.map.comps[G.map.isl[i]].tee?'#a3c05a':'#86b35c';
+      c.fillStyle = t===1?'rgba(120,206,204,.55)':t===2?'rgba(84,178,186,.3)':t===3?'#e2cf9a':t===5?'#9a9484':G.map.tree[i]?'#5d8c42':({tropisch:'#a3c05a',nordisch:'#5f8a5a',heide:'#b0a860',vulkan:'#5a6a44'})[G.map.comps[G.map.isl[i]].biome]||'#86b35c';
       const [mx,my]=miniXY(x,y); c.fillRect(mx-k,my,2*k+.4,k+.4); }
   }
   mctx.setTransform(dpr,0,0,dpr,0,0); mctx.clearRect(0,0,MW,MH); mctx.drawImage(miniBase,0,0,MW,MH);
@@ -2408,8 +2551,8 @@ mini.addEventListener('pointerup',()=>{ mini._d=false; });
 // ============================================================ input
 function screenToTile(sx,sy){ const wx=(sx-W/2)/cam.z+cam.x, wy=(sy-H/2)/cam.z+cam.y; const a=wx/HW, b=wy/HH; return { fx:(a+b)/2, fy:(b-a)/2 }; }
 function tileAt(sx,sy){ const f=screenToTile(sx,sy); return { tx:Math.floor(f.fx), ty:Math.floor(f.fy), fx:f.fx, fy:f.fy, sx, sy }; }
-function clampCam(){ cam.z=Math.max(.4,Math.min(2.2,cam.z)); cam.x=Math.max(-N*HW,Math.min(N*HW,cam.x)); cam.y=Math.max(0,Math.min(N*2*HH,cam.y)); }
-function zoomAt(sx,sy,f){ const wx=(sx-W/2)/cam.z+cam.x, wy=(sy-H/2)/cam.z+cam.y; cam.z=Math.max(.4,Math.min(2.2,cam.z*f)); cam.x=wx-(sx-W/2)/cam.z; cam.y=wy-(sy-H/2)/cam.z; clampCam(); }
+function clampCam(){ cam.z=Math.max(.3,Math.min(2.2,cam.z)); cam.x=Math.max(-N*HW,Math.min(N*HW,cam.x)); cam.y=Math.max(0,Math.min(N*2*HH,cam.y)); }
+function zoomAt(sx,sy,f){ const wx=(sx-W/2)/cam.z+cam.x, wy=(sy-H/2)/cam.z+cam.y; cam.z=Math.max(.3,Math.min(2.2,cam.z*f)); cam.x=wx-(sx-W/2)/cam.z; cam.y=wy-(sy-H/2)/cam.z; clampCam(); }
 const ptrs=new Map(); let drag=null, pinch=null;
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('wheel',e=>{ e.preventDefault(); zoomAt(e.clientX,e.clientY,Math.exp(-e.deltaY*.0015)); },{passive:false});
@@ -2426,7 +2569,7 @@ cv.addEventListener('pointermove',e=>{
   hover=tileAt(e.clientX,e.clientY);
   if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if (pinch && ptrs.size===2){ const [a,b]=[...ptrs.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y), mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
-    const wx=(pinch.mx-W/2)/pinch.z+pinch.cx, wy=(pinch.my-H/2)/pinch.z+pinch.cy; cam.z=Math.max(.4,Math.min(2.2,pinch.z*d/pinch.d)); cam.x=wx-(mx-W/2)/cam.z; cam.y=wy-(my-H/2)/cam.z; clampCam(); return; }
+    const wx=(pinch.mx-W/2)/pinch.z+pinch.cx, wy=(pinch.my-H/2)/pinch.z+pinch.cy; cam.z=Math.max(.3,Math.min(2.2,pinch.z*d/pinch.d)); cam.x=wx-(mx-W/2)/cam.z; cam.y=wy-(my-H/2)/cam.z; clampCam(); return; }
   if (!drag) return;
   const dx=e.clientX-drag.sx, dy=e.clientY-drag.sy;
   if (!drag.moved && Math.hypot(dx,dy)>(drag.touch?14:6)){ drag.moved=true; if (drag.pan) cv.classList.add('panning'); }
@@ -2612,7 +2755,7 @@ const pct = v => Math.round(v*100)+' %';
 const barCls = v => v>=.75?'g':v>=.45?'w':'b';
 function fertPills(isle){
   const p=(ok,t)=>`<span class="pill ${ok?'ok':''}">${t} ${ok?'✓':'✕'}</span>`;
-  return [p(isle.tee,'Tee'),p(isle.wein,'Wein'),p(isle.ore,'Erz'),p(isle.gold,'Gold'),p(isle.mount,'Stein')].join(' ');
+  return `<span class="pill">${BIOMES[isle.biome]?.n||''}</span> `+[p(isle.tee,'Tee'),p(isle.wein,'Wein'),p(isle.ore,'Erz'),p(isle.gold,'Gold'),p(isle.mount,'Stein')].join(' ');
 }
 // goods worth showing: in stock, or used by something already unlocked or by a tier that already lives here
 function knownGoods(){
@@ -2786,7 +2929,7 @@ function showMenu(mode){
       <p class="fine">Karte Nr. ${G.seed} · speichert automatisch jede Minute in diesem Browser</p>`;
   } else {
     const save=hasSave();
-    card.innerHTML=`<p class="eyebrow">Seekarte · Archipel der Winde · 80 × 80 Felder</p><h1>Salzwind</h1>
+    card.innerHTML=`<p class="eyebrow">Seekarte · Archipel der Winde · ${MAP_N} × ${MAP_N} Felder</p><h1>Salzwind</h1>
       <p class="lede">Ein Schiff, 45 Stämme Holz und 22 Kisten Werkzeug. Segle zu unbekannten Inseln, gründe ein Kontor, verbinde Betriebe über Straßen und lass Pioniere über fünf Stufen bis zu Aristokraten aufsteigen.</p>
       <div class="actions">${save?'<button class="btn primary" id="m-load" type="button">Weiterspielen</button>':''}<button class="btn ${save?'':'primary'}" id="m-new" type="button">Neue Karte</button></div>${controls}
       <p class="fine">Spielstände bleiben in diesem Browser gespeichert.</p>`;
@@ -2819,14 +2962,14 @@ function boot(state){
 
 // ============================================================ save / load
 function serialize(){
-  return { v:1, seed:G.seed, t:G.t, gold:G.gold, stock:G.stock, sup:G.sup, founded:G.founded, goal:G.goal, won:G.won, allowUp:G.allowUp,
+  return { v:2, N, mv:G.map.ver||1, seed:G.seed, t:G.t, gold:G.gold, stock:G.stock, sup:G.sup, founded:G.founded, goal:G.goal, won:G.won, allowUp:G.allowUp,
     cut:G.cut, roads:[...G.road.keys()].filter(i=>G.road[i]), tierSeen:G.tierSeen, unlocked:[...G.unlocked],
     b:G.buildings.map(b=>[b.t,b.x,b.y,b.tier||0,+(b.res||0).toFixed(2),b.on?1:0,+b.prog.toFixed(2),b.out,b.hasIn?1:0,+(b.build??1).toFixed(3)]),
     ship:{x:G.ship.x,y:G.ship.y,a:G.ship.da}, trader:{tm:G.trader.st==='away'?G.trader.tm:120},
     cam:{x:cam.x,y:cam.y,z:cam.z} };
 }
 function restore(s){
-  const g=newState(s.seed,false);
+  const g=newState(s.seed,false,s.mv||1,s.N||80);
   Object.assign(g,{ t:s.t, gold:s.gold, founded:s.founded, goal:s.goal, won:s.won, allowUp:s.allowUp!==false, tierSeen:TIERS.map((_,i)=>i===0||!!(s.tierSeen&&s.tierSeen[i])), unlocked:new Set(s.unlocked||[]) });
   for (const k of GK){ g.stock[k]=s.stock[k]||0; g.sup[k]=s.sup?s.sup[k]??1:1; }
   for (const i of s.cut||[]) g.map.tree[i]=0; g.cut=(s.cut||[]).slice();
@@ -2839,7 +2982,7 @@ function restore(s){
 }
 function saveGame(){ if (!G || G.demo) return; try{ localStorage.setItem(SAVE_KEY,JSON.stringify(serialize())); }catch(_){} }
 function loadGame(data){
-  try{ const s=data || JSON.parse(localStorage.getItem(SAVE_KEY)||'null'); if (!s || s.v!==1) return false;
+  try{ const s=data || JSON.parse(localStorage.getItem(SAVE_KEY)||'null'); if (!s || (s.v!==1 && s.v!==2)) return false;
     const g=restore(s); boot(g); if (s.cam){ cam.x=s.cam.x; cam.y=s.cam.y; cam.z=s.cam.z; clampCam(); }
     hideMenu(); setSpeed(1); return true; }catch(err){ console.error(err); return false; }
 }
@@ -2886,7 +3029,7 @@ function demo(){
   showMenu('start');
 }
 window.claude?.hot?.snapshot?.(()=>({ save: G && !G.demo ? serialize() : null, speed: G ? G.speed : 1 }));
-window.__salzwind = { get G(){ return G; }, get walkers(){ return walkers; }, get coaches(){ return coaches; }, get deer(){ return deer; }, get carriers(){ return carriers; }, render, place, addBuilding, TIERS, step, recompute, setTool, select, startNew, saveGame, loadGame, cam, B };
+window.__salzwind = { get G(){ return G; }, get N(){ return N; }, get walkers(){ return walkers; }, get coaches(){ return coaches; }, get deer(){ return deer; }, get carriers(){ return carriers; }, render, place, addBuilding, TIERS, step, recompute, setTool, select, startNew, saveGame, loadGame, cam, B };
 if (window.claude?.hot?.ready) window.claude.hot.ready(start); else start(window.claude?.hot?.data ?? {});
 })();
 </script>
