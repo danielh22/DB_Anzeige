@@ -73,5 +73,7 @@ Im Ordner [`salzwind/`](salzwind/index.html) liegt ein eigenständiges Insel-Auf
 (eine einzige HTML-Datei, keine Abhängigkeiten) auf einer Karte mit 128 × 128 Feldern und Inseln in fünf Klimazonen: Mit dem Schiff Kontore gründen, Betriebe über
 Straßen anbinden und 24 Waren in Produktionsketten herstellen, etwa Wolle → Stoff → Kleidung,
 Holz → Kohle und Erz → Eisen → Werkzeug, Ton → Ziegel, Hopfen → Bier, Trauben → Wein oder Gold → Schmuck.
-Die Bewohner steigen über fünf Stufen von Pionieren bis zu Aristokraten auf. Mit GitHub Pages erreichbar unter
+Die Bewohner steigen über fünf Stufen von Pionieren bis zu Aristokraten auf. Jede Insel hat ihr eigenes Lager; Schiffe bringen Waren von Hand oder über Handelsrouten zwischen den Inseln,
+eine Werft baut weitere Schiffe. Wälder, Erzadern und Fischgründe sind endlich, Brände, Seuchen, Stürme und
+Missernten fordern Feuerwehr und Arzt. Mit GitHub Pages erreichbar unter
 `https://<user>.github.io/<repo>/salzwind/`. Spielstände werden im Browser gespeichert.
