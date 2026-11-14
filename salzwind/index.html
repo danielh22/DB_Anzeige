@@ -760,7 +760,7 @@ const MAX_SHIPS=10;
 const SHIPTYPES={
   schaluppe:{ n:'Schaluppe', cap:80, speed:4.2, cost:{gold:700, holz:20, stoff:6, werkzeug:4}, time:60, scale:.82, masts:[[.06,36]], d:'Klein und schnell.' },
   kogge:{ n:'Kogge', cap:160, speed:3.2, cost:{gold:1200, holz:30, stoff:10, werkzeug:8}, time:90, scale:1, masts:[[.06,42]], d:'Der solide Allrounder.' },
-  fleute:{ n:'Fleute', cap:300, speed:2.5, cost:{gold:2400, holz:50, stoff:18, werkzeug:12, eisen:6}, time:140, scale:1.22, masts:[[.42,32],[.04,42],[-.38,30]], d:'Riesiger Laderaum, aber träge.', unlock:{t:[3,1]} },
+  fleute:{ n:'Fleute', cap:300, speed:2.5, cost:{gold:2400, holz:50, stoff:18, werkzeug:12, eisen:6}, time:140, scale:1.22, masts:[[.42,32],[.04,42],[-.38,30]], lvl:2, d:'Riesiger Laderaum, aber träge. Braucht eine Werft der Stufe II.', unlock:{t:[3,1]} },
 };
 const TECHS=[
   { k:'werkzeuge', n:'Bessere Werkzeuge', c:60, d:'Rohstoffbetriebe arbeiten 15 % schneller.' },
@@ -779,7 +779,32 @@ const TAXM=[.7,1,1.4], TAXH=[.08,0,-.12], TAXN=['niedrig','normal','hoch'];
 const FERT_N={ tee:'Tee', wein:'Wein', indigo:'Indigo', gewuerz:'Gewürze' };
 const shipCap = s => Math.round(s.cap*(hasTech('laderaum')?1.25:1));
 const shipSpeed = s => (s.speed||3.2)*(hasTech('rumpf')?1.2:1);
-const shipTime = b => (SHIPTYPES[b.shipType]||SHIPTYPES.kogge).time;
+const shipTime = b => (SHIPTYPES[b.shipType]||SHIPTYPES.kogge).time*[1,.7,.5][(b.lvl||1)-1];
+// building levels I-III
+const LVL_N=['I','II','III'], LVL_REQ={2:{t:[2,1]},3:{t:[3,1]}}, LVL_PROD=[1,1.4,1.8];
+const canLevel = t => !['strasse','haus','kathedrale'].includes(t);
+const lvlOf = b => b.lvl||1;
+function lvlReqOk(to){ const u=LVL_REQ[to]; return atLeast(u.t[0])>=u.t[1]; }
+function upgCost(b,to){
+  if (b.t==='kontor') return to===2 ? {gold:1500, holz:15, werkzeug:8, ziegel:10} : {gold:4000, werkzeug:15, ziegel:25, glas:10};
+  if (b.t==='werft') return to===2 ? {gold:1500, holz:20, werkzeug:10, ziegel:10} : {gold:3500, werkzeug:15, ziegel:20, eisen:10, glas:6};
+  const d=B[b.t], c={};
+  for (const k in d.cost) c[k] = k==='gold' ? Math.round(d.cost.gold*(to===2?1.2:2.2)) : Math.ceil(d.cost[k]*(to===2?.8:1.2));
+  c.ziegel=(c.ziegel||0)+(to===2?4:8); if (to===3) c.glas=(c.glas||0)+3;
+  return c;
+}
+function lvlEffect(b,to){
+  const d=B[b.t];
+  if (b.t==='kontor') return to===2 ? 'Lager +50 je Ware, Baugebiet +3 Felder, Marktreichweite +2 Felder' : 'Lager +50 je Ware, Baugebiet +3 Felder, Marktreichweite +2 Felder, Händler zahlen hier 10 % mehr';
+  if (b.t==='werft') return to===2 ? 'Bauzeit 30 % kürzer, die Fleute kann gebaut werden' : 'Bauzeit halbiert, neue Schiffe fassen 20 % mehr';
+  if (b.t==='markt') return 'Lager +20 je Ware, Reichweite und Baugebiet +2 Felder';
+  if (b.t==='lager') return 'Lager +40 je Ware';
+  if (b.t==='universitaet') return to===2 ? '15 statt 10 Wissen pro Minute' : '22 Wissen pro Minute';
+  if (b.t==='foerster') return 'Pflanzt deutlich schneller';
+  if (d.svc) return 'Reichweite +2 Felder';
+  if (d.out) return to===2 ? '40 % mehr Produktion, Unterhalt +50 %' : '80 % mehr Produktion, Unterhalt doppelt so hoch';
+  return '';
+}
 const ORE_MAX=100, GOLD_MAX=60;
 function makeShip(id,name,x,y,cap,type='kogge'){ return { id, name, x, y, path:[], ang:.8, da:.8, cargo:emptyGoods(), cap, type, speed:SHIPTYPES[type].speed, route:null, rwait:0 }; }
 function newState(seed, demo, ver=3, n=MAP_N){
@@ -835,9 +860,10 @@ function recompute(){
     G.cnt[b.t]=(G.cnt[b.t]||0)+1;
     const d=B[b.t], cx=b.x+d.s/2, cy=b.y+d.s/2;
     if (d.hub) G.hubIds.add(b.id);
-    if (d.influence){ const id=b.isl; circle(cx,cy,d.influence,i=>{ if (M.isl[i]===id) own[i]=1; }); }
-    if (d.radius){ const g = cov[d.hub?'markt':d.svc]; circle(cx,cy,d.radius+((d.svc==='feuerwehr'&&hasTech('brandschutz'))||(d.svc==='arzt'&&hasTech('medizin'))?3:0),i=>{ g[i]=1; }); }
-    const add = b.t==='kontor'?50 : b.t==='markt'?20 : b.t==='lager'?(d.store||40) : 0;
+    const L=lvlOf(b)-1;
+    if (d.influence){ const id=b.isl; circle(cx,cy,d.influence+L*(b.t==='kontor'?3:2),i=>{ if (M.isl[i]===id) own[i]=1; }); }
+    if (d.radius){ const g = cov[d.hub?'markt':d.svc]; circle(cx,cy,d.radius+2*L+((d.svc==='feuerwehr'&&hasTech('brandschutz'))||(d.svc==='arzt'&&hasTech('medizin'))?3:0),i=>{ g[i]=1; }); }
+    const add = (b.t==='kontor'?50 : b.t==='markt'?20 : b.t==='lager'?(d.store||40) : 0)*(L+1);
     if (add) G.caps[b.isl]=(G.caps[b.isl]||30)+add;
   }
   const q=[];
@@ -986,8 +1012,9 @@ function step(dt){
   G.t+=dt;
   const broke = G.gold<0;
   let upkeep=0;
-  for (const b of G.buildings){ const d=B[b.t]; upkeep+=d.up||0;
-    if (b.build<1){ b.build=Math.min(1,b.build+dt/buildTime(b.t)); b.st='Im Bau'; b.active=false; if (b.build>=1){ b.build=1; G.dirty=true; } continue; }
+  for (const b of G.buildings){ const d=B[b.t]; upkeep+=(d.up||0)*(1+.5*(lvlOf(b)-1));
+    if (b.build<1){ b.build=Math.min(1,b.build+dt/(buildTime(b.t)*(b.upTo?.6:1))); b.st=b.upTo?'Wird ausgebaut':'Im Bau'; b.active=false;
+      if (b.build>=1){ b.build=1; G.dirty=true; if (b.upTo){ b.lvl=b.upTo; b.upTo=null; toast(`${d.n} auf ${islName(b.isl)} ist jetzt auf Stufe ${LVL_N[b.lvl-1]} ausgebaut.`,'good'); } } continue; }
     if (b.fire>0){ b.st='Brennt!'; b.active=false; continue; }
     if (d.out) produce(b,d,dt,broke); }
   G.gold -= upkeep*dt/60; G.upkeepRate=upkeep;
@@ -996,7 +1023,7 @@ function step(dt){
   for (const s of G.ships) routeTick(s,dt);
   werftTick(dt);
   eventsTick(dt);
-  for (const b of G.buildings) if (b.t==='universitaet' && !(b.build<1) && !(b.fire>0) && b.on) G.rp+=dt*10/60;
+  for (const b of G.buildings) if (b.t==='universitaet' && !(b.build<1) && !(b.fire>0) && b.on) G.rp+=dt*[10,15,22][lvlOf(b)-1]/60;
   G.secAcc+=dt;
   if (G.secAcc>=1){ G.secAcc=0; natureTick(1); checkUnlocks(); checkGoals(); warnings(); }
   if (G.treesDirty) recountTrees();
@@ -1023,6 +1050,7 @@ function produce(b,d,dt,broke){
     if (FARMS.has(b.t) || b.t==='schaf' || b.t==='rinder'){ if (hasTech('fruchtwechsel')) mult*=1.25; }
     else if (d.in){ if (hasTech('manufaktur')) mult*=1.2; }
     else if (hasTech('werkzeuge')) mult*=1.15;
+    mult*=LVL_PROD[lvlOf(b)-1];
     if (d.fert && !G.map.comps[b.isl][d.fert]) mult*=.5;
     if (b.t==='holzfaeller'){ mult *= Math.min(1,(b.trees||0)/8); zero='Kein Wald in der Nähe'; }
     if (b.t==='erzmine'||b.t==='goldmine'){ if (reserveOf(b)<1){ mult=0; zero='Vorkommen erschöpft'; } }
@@ -1053,7 +1081,7 @@ function natureTick(dt){
     if (inB(x+dx,y+dy) && Math.random()<.12 && M.T[j]===4 && !M.tree[j] && !G.occ[j] && !G.road[j]) plantTree(j); }
   for (const b of G.buildings){ if (b.t!=='foerster' || b.build<1 || b.fire>0) continue;
     if (!b.on){ b.st='Angehalten'; continue; }
-    b.ft=(b.ft||0)+dt; if (b.ft<12) { if (!b.st) b.st='Pflanzt Bäume'; continue; } b.ft=0;
+    b.ft=(b.ft||0)+dt; if (b.ft<12/[1,1.6,2.5][lvlOf(b)-1]) { if (!b.st) b.st='Pflanzt Bäume'; continue; } b.ft=0;
     const c=[]; circle(b.x+.5,b.y+.5,3.3,i=>{ if (M.T[i]===4 && !M.tree[i] && !G.occ[i] && !G.road[i]) c.push(i); });
     if (c.length){ plantTree(c[Math.floor(Math.random()*c.length)]); b.st='Pflanzt Bäume'; b.active=true; } else { b.st='Kein Platz zum Pflanzen'; b.active=false; } }
   for (let i=0;i<N*N;i++){
@@ -1215,7 +1243,7 @@ function werftTick(dt){
     if (b.shipT>=shipTime(b)){ b.shipT=null; b.st='Bereit'; const ST=SHIPTYPES[b.shipType]||SHIPTYPES.kogge;
       let w=null; border(b.x,b.y,2,i=>{ if (w==null && nav(i)) w=i; }); if (w==null) continue;
       const used=new Set(G.ships.map(s=>s.name)), nm=SHIP_NAMES.find(n=>!used.has(n))||('Schiff '+G.nextShip);
-      G.ships.push(makeShip(G.nextShip++,nm,w%N+.5,((w/N)|0)+.5,ST.cap,b.shipType||'kogge'));
+      G.ships.push(makeShip(G.nextShip++,nm,w%N+.5,((w/N)|0)+.5,Math.round(ST.cap*(lvlOf(b)>=3?1.2:1)),b.shipType||'kogge'));
       toast(`Die ${ST.n} ${nm} ist vom Stapel gelaufen.`,'good'); }
   }
 }
@@ -1245,7 +1273,7 @@ function traderTick(dt){
   }
 }
 const buyPrice = g => Math.ceil(GOODS[g].p*1.3*(G.trader.disc||1));
-const sellPrice = g => Math.floor(GOODS[g].p*.75*(G.trader.disc<1?1.15:1));
+const sellPrice = g => { const k=kontorOn(G.trader.isl); return Math.floor(GOODS[g].p*.75*(G.trader.disc<1?1.15:1)*(k&&lvlOf(k)>=3?1.1:1)); };
 function trade(g, n){
   const tr=G.trader, st=G.stores[tr.isl], cap=capOf(tr.isl);
   if (tr.st!=='docked' || !st) return;
@@ -1590,6 +1618,8 @@ function drawStatic(c,type,cx,cy,o){
     c.restore();
     c.strokeStyle='#6e5638'; c.lineWidth=1.6; c.beginPath(); c.moveTo(cx,cy-30); c.lineTo(cx+60,cy); c.lineTo(cx,cy+30); c.lineTo(cx-60,cy); c.closePath(); c.stroke();
     softShadow(c,cx,cy+2,50,22,.35);
+    if ((o.lvl||1)>=2){ softShadow(c,cx+16,cy-14,16,7); box(c,cx+16,cy-16,12,6,16,'#c7b48c','plank'); win(c,face(cx+16,cy-16,12,6,'L'),.3,8,.3,4,{frame:'#8a7a5c'}); gable(c,cx+16,cy-16,12,6,16,9,'#7a3a2a','#c7b48c'); }
+    if ((o.lvl||1)>=3){ box(c,cx-30,cy-14,6,3,42,'#e2d6bc','stone'); const TL=face(cx-30,cy-14,6,3,'L'); E(c,...TL(.5,34),2.2,2.2,'#f4efe2'); c.strokeStyle='#3a3540'; c.lineWidth=.6; c.beginPath(); const cc=TL(.5,34); c.moveTo(cc[0],cc[1]); c.lineTo(cc[0],cc[1]-1.6); c.moveTo(cc[0],cc[1]); c.lineTo(cc[0]+1.2,cc[1]); c.stroke(); pyramid(c,cx-30,cy-14,6,3,42,14,'#8e3f2f'); }
     const X=cx-8, Y=cy-4, a=34, b=17;
     box(c,X,Y,a,b,13,'#b8a684','stone');
     box(c,X,Y-13,a,b,13,'#ece2c8','timber');
@@ -1969,14 +1999,18 @@ function drawStatic(c,type,cx,cy,o){
   case 'werft': {
     plaza(c,cx,cy,56,28,'#b39c72',29);
     softShadow(c,cx-20,cy-8,18,8);
-    box(c,cx-22,cy-10,14,7,14,'#86603d','plank'); door(c,face(cx-22,cy-10,14,7,'R'),.3,.4,10,'#3e2818');
-    gable(c,cx-22,cy-10,14,7,14,10,'#5a3a2a','#86603d');
+    const wl=o.lvl||1, wh=wl>=2?20:14;
+    if (wl>=3){ P(c,[[cx+4,cy-14],[cx+40,cy+4],[cx+30,cy+9],[cx-6,cy-9]],'#9a958a'); c.strokeStyle='#6d6a62'; c.lineWidth=1; c.beginPath(); ln(c,[cx+4,cy-14],[cx+40,cy+4]); ln(c,[cx-6,cy-9],[cx+30,cy+9]); c.stroke(); }
+    box(c,cx-22,cy-10,14,7,wh,wl>=2?'#9a7448':'#86603d','plank'); door(c,face(cx-22,cy-10,14,7,'R'),.3,.4,10,'#3e2818');
+    if (wl>=2) win(c,face(cx-22,cy-10,14,7,'L'),.3,12,.3,4,{frame:'#5a3c22'});
+    gable(c,cx-22,cy-10,14,7,wh,10,wl>=2?'#4a3a5a':'#5a3a2a',wl>=2?'#9a7448':'#86603d');
     c.strokeStyle='#6e4f2c'; c.lineWidth=2; c.beginPath(); ln(c,[cx-6,cy-14],[cx+34,cy+6]); ln(c,[cx-14,cy-10],[cx+26,cy+10]); c.stroke();
     c.strokeStyle='rgba(60,40,20,.5)'; c.lineWidth=.8; c.beginPath(); for (let k=0;k<9;k++){ const t=k/8; ln(c,lerp2([cx-6,cy-14],[cx+34,cy+6],t),lerp2([cx-14,cy-10],[cx+26,cy+10],t)); } c.stroke();
     for (let k=0;k<3;k++) for (let j=0;j<3-k;j++) logEnd(c,cx-28+j*4.6+k*2.3,cy+8-k*4,2.2);
     c.strokeStyle='#4a3424'; c.lineWidth=1.6; c.beginPath(); ln(c,[cx+30,cy-6],[cx+30,cy-34]); ln(c,[cx+30,cy-32],[cx+14,cy-22]); c.stroke();
     c.strokeStyle='rgba(40,30,20,.7)'; c.lineWidth=.5; c.beginPath(); ln(c,[cx+16,cy-23],[cx+16,cy-12]); c.stroke();
     box(c,cx+16,cy-10,2.5,1.25,2.5,'#a77a45','plank');
+    if ((o.lvl||1)>=3){ c.strokeStyle='#4a3424'; c.lineWidth=2; c.beginPath(); ln(c,[cx-10,cy+10],[cx-10,cy-44]); ln(c,[cx-10,cy-42],[cx+12,cy-32]); ln(c,[cx-10,cy-30],[cx+2,cy-37]); c.stroke(); c.strokeStyle='rgba(40,30,20,.7)'; c.lineWidth=.5; c.beginPath(); ln(c,[cx+11,cy-32],[cx+11,cy-18]); c.stroke(); box(c,cx+11,cy-16,3,1.5,3,'#8a6440','plank'); }
     break; }
   case 'feuerwehr': {
     softShadow(c,cx+3,cy+2,22,10);
@@ -2120,7 +2154,7 @@ function sprite(key,w,h,ay,draw){
   const c=cnv.getContext('2d'); c.scale(SPR,SPR); c.translate(w/2,ay); draw(c);
   s={cnv,w,h,ay}; sprites.set(key,s); return s;
 }
-function bSprite(type,tier,v,stage=0){ const s2=B[type].s===2; return sprite('b|'+type+'|'+tier+'|'+v+'|'+stage, s2?150:100, s2?150:124, s2?102:88, c=>drawStatic(c,type,0,0,{tier,seed:v,stage})); }
+function bSprite(type,tier,v,stage=0,lvl=1){ const s2=B[type].s===2; if (type!=='kontor'&&type!=='werft') lvl=1; return sprite('b|'+type+'|'+tier+'|'+v+'|'+stage+'|'+lvl, s2?150:100, s2?150:124, s2?102:88, c=>drawStatic(c,type,0,0,{tier,seed:v,stage,lvl})); }
 function blit(s,x,y,k=1){ ctx.drawImage(s.cnv,x-s.w/2*k,y-s.ay*k,s.w*k,s.h*k); }
 function blit2(c,s,x,y,k=1){ c.drawImage(s.cnv,x-s.w/2*k,y-s.ay*k,s.w*k,s.h*k); }
 function treeSprite(kind,ci){
@@ -2686,7 +2720,7 @@ function drawDecor(c,[x,y,kind],t){
 // construction sites: the building grows out of a scaffold
 const buildTime = t => t==='haus'?4 : t==='kathedrale'?40 : t==='theater'?25 : B[t].s===2?12 : 8;
 function drawConstruction(c,b,cx,cy,at){
-  const d=B[b.t], s=d.s, f=b.build, v=b.t==='haus'?b.seed%12:b.seed%3, sp=bSprite(b.t,b.tier||0,v,0);
+  const d=B[b.t], s=d.s, f=b.build, v=b.t==='haus'?b.seed%12:b.seed%3, sp=bSprite(b.t,b.tier||0,v,0,lvlOf(b));
   footprintFill(b.x,b.y,s,'rgba(120,90,55,.55)');
   const top=cy-sp.ay, bot=top+sp.h, cut=bot-(sp.h-(sp.h-sp.ay)*.2)*(.1+.9*f);
   c.save(); c.beginPath(); c.rect(cx-sp.w/2,cut,sp.w,bot-cut); c.clip(); c.globalAlpha=.5+.5*f; blit(sp,cx,cy); c.restore();
@@ -2822,6 +2856,13 @@ function drawDog(c,x,y,dir,ph,col){
   c.restore();
 }
 
+// pennants show the building level
+function drawLevelFlags(c,b,cx,cy,t){
+  const s=B[b.t].s, n=lvlOf(b)-1, x0=cx, y0=cy-HH*s+3, h=s===2?58:38;
+  for (let k=0;k<n;k++){ const x=x0+(k?6:0)*(s===2?1.4:1), y=y0+(k?3:0), w=Math.sin(t*3+k+b.id)*1.4;
+    c.strokeStyle='#3a2818'; c.lineWidth=1.2; c.beginPath(); c.moveTo(x,y); c.lineTo(x,y-h); c.stroke();
+    c.fillStyle=n===2?'#e3a948':'#3f6aa8'; c.beginPath(); c.moveTo(x,y-h); c.quadraticCurveTo(x+5,y-h+1+w,x+10,y-h+3+w); c.lineTo(x,y-h+6); c.closePath(); c.fill(); }
+}
 // flames on a burning building, firefighters when a fire station is close
 function drawFire(c,b,cx,cy,t){
   const s=B[b.t].s, w=s===2?26:12, covered=cov.feuerwehr[b.y*N+b.x];
@@ -2921,7 +2962,8 @@ function render(rt){
       const v=b.t==='haus'?b.seed%12:b.seed%3;
       if (b.build<1) drawConstruction(ctx,b,cx,cy,at);
       else { const d=B[b.t], stg=FARMS.has(b.t)?Math.min(3,Math.floor((b.prog/d.time)*4)):0;
-        blit(bSprite(b.t,b.tier||0,v,stg),cx,cy);
+        blit(bSprite(b.t,b.tier||0,v,stg,lvlOf(b)),cx,cy);
+        if (lvlOf(b)>1 && z>.45) drawLevelFlags(ctx,b,cx,cy,at);
         drawAnim(ctx,b.t,cx,cy,{tier:b.tier,active:b.active&&G.speed>0,t:at,seed:v,detail:z>.6,prog:b.shipT!=null?b.shipT/shipTime(b):-1}); }
       if (b.fire>0) drawFire(ctx,b,cx,cy,at); if (b.sick>0) drawSick(ctx,cx,cy,at); }
     else if (o[1]===3) drawShip(ctx,o[2],o[3],t);
@@ -3287,6 +3329,9 @@ function act(a){
   else if (k==='tech'){ const T=TECHS.find(t=>t.k===v); if (T && !G.techs.has(T.k) && G.rp>=T.c){ G.rp-=T.c; G.techs.add(T.k); G.dirty=true; toast(`Erforscht: ${T.n}. ${T.d}`,'good'); renderPanel(true); } }
   else if (k==='tax'){ const [ti,lv]=v.split('.').map(Number); G.taxLv[ti]=lv; renderPanel(true); }
   else if (k==='toggle' && b){ b.on=!b.on; renderPanel(true); }
+  else if (k==='upgrade' && b && canLevel(b.t) && lvlOf(b)<3 && !(b.build<1)){ const to=lvlOf(b)+1, cost=upgCost(b,to);
+    if (!lvlReqOk(to)) toast(unlockText(LVL_REQ[to])+' möglich.','warn'); else if (missing(cost,b.isl)) toast('Dafür fehlt Material im Lager dieser Insel.','warn');
+    else { pay(cost,b.isl); b.upTo=to; b.build=0; b.prog=0; G.dirty=true; renderPanel(true); } }
   else if (k==='demolish' && b){ if (panel.dataset.confirm==='1'){ demolishAt(b.x,b.y); panel.dataset.confirm=''; } else { panel.dataset.confirm='1'; renderPanel(true); } }
   else if (k==='buy') trade(v,5);
   else if (k==='sell') trade(v,-5);
@@ -3322,7 +3367,7 @@ function renderPanel(force){
     const confirm=panel.dataset.confirm==='1';
     if (b.build<1){
       sig=['build',b.id,confirm].join('|');
-      html=head(d.n,'Wird gebaut')+`<div class="sec"><div class="row"><span class="l">Baufortschritt</span><span class="v" data-v="build"></span></div><div class="bar"><i data-bar="build"></i></div><p class="note">Handwerker errichten das Gebäude. Danach nimmt es seine Arbeit auf.</p></div>
+      html=head(d.n,b.upTo?`Wird auf Stufe ${LVL_N[b.upTo-1]} ausgebaut`:'Wird gebaut')+`<div class="sec"><div class="row"><span class="l">Baufortschritt</span><span class="v" data-v="build"></span></div><div class="bar"><i data-bar="build"></i></div><p class="note">Handwerker errichten das Gebäude. Danach nimmt es seine Arbeit auf.</p></div>
         <div class="sec"><div class="btns"><button class="btn danger" data-act="demolish" type="button">${confirm?'Wirklich abreißen?':'Abreißen'}</button></div></div>`;
     } else if (b.t==='haus'){
       const T=TIERS[b.tier], NX=TIERS[b.tier+1], i=b.y*N+b.x;
@@ -3348,7 +3393,7 @@ function renderPanel(force){
       sig=[b.id,b.st,b.on,b.conn,confirm,b.trees,extra,b.fire>0].join('|');
       const io=`${d.in?Object.entries(d.in).map(([g,n])=>`${n} ${icon(g,14)} ${GOODS[g].n}`).join(' + ')+' → ':''}${d.amt||1} ${icon(d.out,14)} ${GOODS[d.out].n}`;
       const stc = b.st.startsWith('Arbeitet')?'ok': b.st==='Angehalten'?'warn':'bad';
-      html=head(d.n,`Unterhalt ${d.up} Gold pro Minute`)+
+      html=head(d.n,`Stufe ${LVL_N[lvlOf(b)-1]} · Unterhalt ${Math.round(d.up*(1+.5*(lvlOf(b)-1)))} Gold pro Minute`)+
         `<div class="sec"><div class="row"><span class="l">Zustand</span><span class="pill ${stc}">${b.st||'Wartet'}</span></div>
         <div class="row"><span class="l">Fortschritt</span><span class="v" data-v="prog"></span></div><div class="bar"><i data-bar="prog"></i></div>
         <div class="row"><span class="l">Auslastung</span><span class="v" data-v="eff"></span></div><div class="bar g"><i data-bar="eff"></i></div></div>
@@ -3360,10 +3405,10 @@ function renderPanel(force){
         ${!b.conn?'<p class="note">Baue eine Straße von diesem Betrieb bis zu einem Kontor oder Markthaus.</p>':''}</div>
         <div class="sec"><div class="btns"><button class="btn" data-act="toggle" type="button">${b.on?'Anhalten':'Fortsetzen'}</button><button class="btn danger" data-act="demolish" type="button">${confirm?'Wirklich abreißen?':'Abreißen'}</button></div></div>`;
     } else if (b.t==='werft'){
-      const types=Object.keys(SHIPTYPES).filter(k=>!SHIPTYPES[k].unlock || atLeast(SHIPTYPES[k].unlock.t[0])>=SHIPTYPES[k].unlock.t[1]);
+      const types=Object.keys(SHIPTYPES).filter(k=>!SHIPTYPES[k].lvl || lvlOf(b)>=SHIPTYPES[k].lvl);
       sig=[b.id,confirm,b.shipT==null,b.shipType,G.ships.length,types.map(k=>!!missing(SHIPTYPES[k].cost,b.isl)).join(),b.fire>0].join('|');
       const cur=SHIPTYPES[b.shipType]||SHIPTYPES.kogge;
-      html=head(d.n,`Insel ${islName(b.isl)} · Unterhalt ${d.up} Gold/min`)+
+      html=head(d.n,`Stufe ${LVL_N[lvlOf(b)-1]} · Insel ${islName(b.isl)} · Unterhalt ${Math.round(d.up*(1+.5*(lvlOf(b)-1)))} Gold/min`)+
         (b.shipT==null ? `<div class="sec"><p class="note">Das Material kommt aus dem Lager dieser Insel.</p>${types.map(k=>{ const T=SHIPTYPES[k], miss=missing(T.cost,b.isl);
             return `<div class="sec" style="border:0;padding-top:4px;margin-top:4px"><div class="row"><span class="l"><b>${T.n}</b></span><span class="v">${T.cap} Waren · ${T.speed>3.5?'schnell':T.speed<3?'langsam':'mittel'}</span></div><p class="note">${T.d} Bauzeit ${T.time} s.</p><div class="row">${costHTML(T.cost,b.isl)}<button class="btn ${miss?'':'primary'}" type="button" data-act="buildship:${k}" ${miss||G.ships.length>=MAX_SHIPS?'disabled':''}>Bauen</button></div></div>`; }).join('')}</div>`
           : `<div class="sec"><div class="row"><span class="l">Baut eine ${cur.n}</span><span class="v" data-v="ship"></span></div><div class="bar"><i data-bar="ship"></i></div></div>`)+
@@ -3378,8 +3423,8 @@ function renderPanel(force){
       const isle=G.map.comps[b.isl];
       sig=[b.id,confirm,capOf(b.isl),isle.id,cnt(b.t),b.st].join('|');
       const pills=fertPills(isle);
-      const svcTxt = d.hub ? (d.radius ? `Versorgt Häuser im Umkreis von ${d.radius} Feldern mit Waren und nimmt Waren der angeschlossenen Betriebe an.` : d.desc) : d.svc ? `Erfüllt den Wunsch nach ${SVC_A[d.svc]} im Umkreis von ${d.radius} Feldern.` : d.desc;
-      html=head(d.n, `Insel ${isle.name} · Unterhalt ${d.up} Gold/min`)+
+      const svcTxt = d.hub ? (d.radius ? `Versorgt Häuser im Umkreis von ${d.radius+2*(lvlOf(b)-1)} Feldern mit Waren und nimmt Waren der angeschlossenen Betriebe an.` : d.desc) : d.svc ? `Erfüllt den Wunsch nach ${SVC_A[d.svc]} im Umkreis von ${d.radius+2*(lvlOf(b)-1)} Feldern.` : d.desc;
+      html=head(d.n, `Stufe ${LVL_N[lvlOf(b)-1]} · Insel ${isle.name} · Unterhalt ${Math.round(d.up*(1+.5*(lvlOf(b)-1)))} Gold/min`)+
         `<div class="sec"><p class="note">${svcTxt}</p>${d.hub?`<div class="row"><span class="l">Lagerplatz je Ware auf ${isle.name}</span><span class="v">${capOf(b.isl)}</span></div>`:''}${b.t==='foerster'?`<div class="row"><span class="l">Zustand</span><span class="pill">${b.st||'Wartet'}</span></div>`:''}</div>
         <div class="sec"><h4>Fruchtbarkeit der Insel</h4><div>${pills}</div></div>
         <div class="sec"><div class="btns">${b.t==='kontor'?'<button class="btn" data-act="tool:markt" type="button">Markthaus bauen</button>':''}<button class="btn danger" data-act="demolish" type="button">${confirm?'Wirklich abreißen?':'Abreißen'}</button></div></div>`;
@@ -3433,6 +3478,14 @@ function renderPanel(force){
       <div class="sec"><div class="row"><span class="l">Steuern</span><span class="v">+${G.taxRate.toFixed(0)} Gold</span></div><div class="row"><span class="l">Unterhalt</span><span class="v">−${G.upkeepRate.toFixed(0)} Gold</span></div>
       ${TIERS.map((T,i)=>`<div class="row"><span class="l">${T.n}</span><span class="v">${fmt.format(G.popT[i]||0)}</span></div>`).join('')}</div>`;
   }
+  if (sel.kind==='b'){ const b=G.byId.get(sel.id);
+    if (b && canLevel(b.t) && !(b.build<1)){ const L=lvlOf(b), to=L+1;
+      let u=`<div class="sec"><h4>Ausbau · Stufe ${LVL_N[L-1]} von III</h4>`;
+      if (L>=3) u+=`<p class="note">Höchste Stufe erreicht.</p>`;
+      else { const cost=upgCost(b,to), req=lvlReqOk(to), miss=missing(cost,b.isl);
+        u+=`<p class="note">Stufe ${LVL_N[to-1]}: ${lvlEffect(b,to)}.</p><div class="row">${costHTML(cost,b.isl)}<button class="btn ${req&&!miss?'primary':''}" type="button" data-act="upgrade" ${req&&!miss?'':'disabled'}>Ausbauen</button></div>${req?'':`<p class="note">${unlockText(LVL_REQ[to])} möglich.</p>`}`;
+        sig+='|'+req+'|'+!!miss; }
+      html+=u+'</div>'; sig+='|lvl'+L; } }
   if (!force && sig===panelSig){ updatePanelLive(); return; }
   if (force && sel.kind!=='b') panel.dataset.confirm='';
   panelSig=sig; panel.innerHTML=html; panel.hidden=false;
@@ -3579,7 +3632,7 @@ function serialize(){
   return { v:3, N, mv:G.map.ver||1, seed:G.seed, t:G.t, gold:G.gold, stores:G.stores, sup:G.sup, founded:G.founded, goal:G.goal, won:G.won, allowUp:G.allowUp,
     edits:[...G.treeEdits], saplings:[...G.saplings].map(([i,g])=>[i,+g.toFixed(2)]), ore, fish,
     roads:[...G.road.keys()].filter(i=>G.road[i]), tierSeen:G.tierSeen, unlocked:[...G.unlocked],
-    b:G.buildings.map(b=>[b.t,b.x,b.y,b.tier||0,+(b.res||0).toFixed(2),b.on?1:0,+b.prog.toFixed(2),b.out,b.hasIn?1:0,+(b.build??1).toFixed(3),+(b.fire||0).toFixed(1),+(b.sick||0).toFixed(1),b.shipT==null?null:+b.shipT.toFixed(1),b.shipType||null]),
+    b:G.buildings.map(b=>[b.t,b.x,b.y,b.tier||0,+(b.res||0).toFixed(2),b.on?1:0,+b.prog.toFixed(2),b.out,b.hasIn?1:0,+(b.build??1).toFixed(3),+(b.fire||0).toFixed(1),+(b.sick||0).toFixed(1),b.shipT==null?null:+b.shipT.toFixed(1),b.shipType||null,lvlOf(b),b.upTo||null]),
     ships:G.ships.map(s=>({ id:s.id, name:s.name, x:s.x, y:s.y, a:s.da, cap:s.cap, type:s.type, cargo:s.cargo, route:s.route })),
     techs:[...G.techs], rp:G.rp, taxLv:G.taxLv,
     events:G.events, nextEvent:G.nextEvent, trader:{tm:G.trader.st==='away'?G.trader.tm:120},
@@ -3595,7 +3648,7 @@ function restore(s){
   for (const [i,v] of s.fish||[]) g.fish[i]=v;
   for (const i of s.roads||[]) g.road[i]=1;
   G=g;
-  for (const [t,x,y,tier,res,on,prog,out,hasIn,bld,fire,sick,shipT,shipType] of s.b){ const b={ shipType:shipType||'kogge', build:bld==null?1:bld, id:g.nextId++, t, x, y, prog:prog||0, out:out||0, hasIn:!!hasIn, on:!!on, eff:.5, st:'', conn:false, seed:(x*7+y*13)%97, fire:fire||0, sick:sick||0, shipT:shipT==null?null:shipT }; if (t==='haus'){ b.tier=tier; b.res=res; b.happy=.7; b.upT=0; } addBuilding(b); }
+  for (const [t,x,y,tier,res,on,prog,out,hasIn,bld,fire,sick,shipT,shipType,lvl,upTo] of s.b){ const b={ shipType:shipType||'kogge', lvl:lvl||1, upTo:upTo||null, build:bld==null?1:bld, id:g.nextId++, t, x, y, prog:prog||0, out:out||0, hasIn:!!hasIn, on:!!on, eff:.5, st:'', conn:false, seed:(x*7+y*13)%97, fire:fire||0, sick:sick||0, shipT:shipT==null?null:shipT }; if (t==='haus'){ b.tier=tier; b.res=res; b.happy=.7; b.upT=0; } addBuilding(b); }
   if (s.ships){
     g.ships=s.ships.map(o=>Object.assign(makeShip(o.id,o.name,o.x,o.y,o.cap,o.type||'kogge'),{ cargo:Object.assign(emptyGoods(),o.cargo), route:o.route||null, da:o.a||0, ang:o.a||0 }));
     g.nextShip=Math.max(0,...g.ships.map(o=>o.id))+1;
