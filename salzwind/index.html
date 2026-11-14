@@ -260,9 +260,9 @@ const GOODS = {
   holz:{n:'Holz',p:6}, stein:{n:'Stein',p:12}, werkzeug:{n:'Werkzeug',p:30}, fisch:{n:'Fisch',p:8},
   wolle:{n:'Wolle',p:10}, stoff:{n:'Stoff',p:32}, getreide:{n:'Getreide',p:6}, mehl:{n:'Mehl',p:11},
   brot:{n:'Brot',p:20}, tee:{n:'Tee',p:38}, kohle:{n:'Kohle',p:10}, erz:{n:'Erz',p:15}, eisen:{n:'Eisen',p:26},
-  ton:{n:'Ton',p:6}, ziegel:{n:'Ziegel',p:16}, hopfen:{n:'Hopfen',p:9}, bier:{n:'Bier',p:26},
-  rind:{n:'Rinder',p:14}, fleisch:{n:'Fleisch',p:24}, kleidung:{n:'Kleidung',p:55}, trauben:{n:'Trauben',p:12},
-  wein:{n:'Wein',p:48}, golderz:{n:'Gold',p:40}, schmuck:{n:'Schmuck',p:90},
+  ton:{n:'Ton',p:6}, ziegel:{n:'Ziegel',p:16}, sand:{n:'Sand',p:4}, glas:{n:'Glas',p:28}, hopfen:{n:'Hopfen',p:9}, bier:{n:'Bier',p:26},
+  rind:{n:'Rinder',p:14}, fleisch:{n:'Fleisch',p:24}, indigo:{n:'Indigo',p:14}, farbe:{n:'Farbstoff',p:22}, kleidung:{n:'Kleidung',p:55}, trauben:{n:'Trauben',p:12},
+  wein:{n:'Wein',p:48}, golderz:{n:'Gold',p:40}, schmuck:{n:'Schmuck',p:90}, moebel:{n:'Möbel',p:70}, gewuerze:{n:'Gewürze',p:45},
 };
 const GK = Object.keys(GOODS);
 
@@ -284,6 +284,12 @@ const ICON = {
   eisen:'<path d="M2 10l3-4h9.5l-3 4z" fill="#c3cbd3"/><path d="M2 10h9.5v3.2H2z" fill="#7d868f"/><path d="M11.5 10l3-4v3.2l-3 4z" fill="#5f666e"/>',
   ton:'<ellipse cx="8" cy="10" rx="6.4" ry="4" fill="#b4673f"/><ellipse cx="7" cy="8.5" rx="3.8" ry="1.9" fill="#d08a5c"/>',
   ziegel:'<rect x="1.5" y="9.4" width="6.2" height="3.6" fill="#a8452d"/><rect x="8.3" y="9.4" width="6.2" height="3.6" fill="#c4553a"/><rect x="4.9" y="5.2" width="6.2" height="3.6" fill="#d36a4c"/>',
+  sand:'<path d="M1.5 12.5c2-4 5-6 6.5-6s4.5 2 6.5 6z" fill="#e6d19a"/><circle cx="6" cy="10" r=".7" fill="#b89a5a"/><circle cx="9.5" cy="9" r=".7" fill="#b89a5a"/><circle cx="8" cy="11.4" r=".7" fill="#b89a5a"/>',
+  glas:'<path d="M5 2h6l-1 11H6z" fill="#a9d6e6" stroke="#e8f4f8" stroke-width=".8"/><path d="M6.4 4h1.2l-.5 7H6.6z" fill="#fff" opacity=".7"/><rect x="5" y="13" width="6" height="1.4" fill="#8fb8c8"/>',
+  indigo:'<path d="M8 14.5C4 12 3 7 6 2c3.5 3 4 8 2 12.5z" fill="#4a6aa8"/><path d="M8 14.5C9 10 11 6 13.5 4c.5 5-2 9-5.5 10.5z" fill="#3a5a96"/>',
+  farbe:'<path d="M3 5h10l-1.2 9H4.2z" fill="#3f5fa8"/><ellipse cx="8" cy="5" rx="5" ry="1.6" fill="#5a7fd0"/><path d="M4 4.6C5 2 11 2 12 4.6" stroke="#9a9a9a" stroke-width=".8" fill="none"/>',
+  moebel:'<rect x="4" y="2" width="1.6" height="12" fill="#8a5a32"/><rect x="10.4" y="7.5" width="1.6" height="6.5" fill="#8a5a32"/><rect x="4" y="7.5" width="8" height="2" fill="#b07a42"/><rect x="5.6" y="3" width="4.6" height="1.4" fill="#b07a42"/>',
+  gewuerze:'<ellipse cx="8" cy="11" rx="6" ry="3" fill="#8a4a2a"/><ellipse cx="8" cy="10" rx="5" ry="2.2" fill="#c0602a"/><circle cx="6" cy="9.4" r=".9" fill="#e3a948"/><circle cx="9.6" cy="9.8" r=".9" fill="#7a2a1a"/><path d="M8 7.5c-1-3 1-5 3-5.5-.5 2.5-1.5 4-3 5.5z" fill="#6a8a3a"/>',
   hopfen:'<path d="M8 1.8c3.2 2.2 4.2 6.4 0 12.4C3.8 8.2 4.8 4 8 1.8z" fill="#92c24c"/><path d="M5.6 6h4.8M5.1 9h5.8M6.1 12h3.8" stroke="#5f8f2a" stroke-width=".9"/>',
   bier:'<rect x="3" y="4.5" width="8" height="9.5" rx="1.2" fill="#e9b13c"/><rect x="2.8" y="2.6" width="8.4" height="3.2" rx="1.4" fill="#fbf4e0"/><path d="M11 6.5h2.3v5H11" fill="none" stroke="#e9b13c" stroke-width="1.6"/>',
   rind:'<ellipse cx="8" cy="9" rx="5" ry="4.6" fill="#8a5a3a"/><ellipse cx="8" cy="11.8" rx="3.2" ry="2" fill="#e8c9a8"/><path d="M3.4 5.2L1.8 3M12.6 5.2L14.2 3" stroke="#efe6d2" stroke-width="1.4" stroke-linecap="round"/><circle cx="6" cy="8" r=".8" fill="#1a1410"/><circle cx="10" cy="8" r=".8" fill="#1a1410"/>',
@@ -297,11 +303,11 @@ const ICON = {
 const icon = (k, s=16) => `<svg class="ico" width="${s}" height="${s}" viewBox="0 0 16 16" aria-hidden="true">${ICON[k]}</svg>`;
 
 const TIERS = [
-  { n:'Pioniere', dat:'Pionieren', house:'Pionierhütte', max:3,  tax:1.5, needs:{fisch:.06}, svc:['markt'], up:{holz:2, werkzeug:1} },
-  { n:'Siedler',  dat:'Siedlern', house:'Siedlerhaus',  max:7,  tax:2.3, needs:{fisch:.05, stoff:.03}, svc:['markt','kapelle'], up:{holz:2, werkzeug:2, stein:4} },
-  { n:'Bürger',   dat:'Bürgern', house:'Bürgerhaus',   max:15, tax:3.5, needs:{fisch:.02, brot:.03, stoff:.03, tee:.03, bier:.03}, svc:['markt','kapelle','schule'], up:{holz:2, werkzeug:2, ziegel:4} },
-  { n:'Kaufleute', dat:'Kaufleuten', house:'Kaufmannshaus', max:25, tax:5, needs:{brot:.03, fleisch:.03, bier:.03, tee:.02, kleidung:.03, wein:.02}, svc:['markt','kapelle','schule','wirtshaus'], up:{werkzeug:3, ziegel:8, eisen:2} },
-  { n:'Aristokraten', dat:'Aristokraten', house:'Herrenhaus', max:40, tax:7.5, needs:{fleisch:.03, brot:.02, tee:.02, kleidung:.04, wein:.04, schmuck:.03}, svc:['markt','kapelle','schule','wirtshaus','theater'], up:null },
+  { n:'Pioniere', dat:'Pionieren', house:'Pionierhütte', max:3,  tax:1.5, needs:{fisch:.06}, lux:[], svc:['markt'], up:{holz:2, werkzeug:1} },
+  { n:'Siedler',  dat:'Siedlern', house:'Siedlerhaus',  max:7,  tax:2.3, needs:{fisch:.05, stoff:.03}, lux:[], svc:['markt','kapelle'], up:{holz:2, werkzeug:2, stein:4} },
+  { n:'Bürger',   dat:'Bürgern', house:'Bürgerhaus',   max:15, tax:3.5, needs:{fisch:.02, brot:.03, stoff:.03, tee:.03, bier:.03}, lux:['tee','bier'], svc:['markt','kapelle','schule'], up:{holz:2, werkzeug:2, ziegel:4, glas:2} },
+  { n:'Kaufleute', dat:'Kaufleuten', house:'Kaufmannshaus', max:25, tax:5, needs:{brot:.03, fleisch:.03, bier:.03, tee:.02, kleidung:.03, wein:.02}, lux:['bier','tee','wein'], svc:['markt','kapelle','schule','wirtshaus'], up:{werkzeug:3, ziegel:8, eisen:2, glas:4} },
+  { n:'Aristokraten', dat:'Aristokraten', house:'Herrenhaus', max:40, tax:7.5, needs:{fleisch:.03, brot:.02, kleidung:.04, moebel:.02, tee:.02, wein:.04, schmuck:.03, gewuerze:.02}, lux:['tee','wein','schmuck','gewuerze'], svc:['markt','kapelle','schule','wirtshaus','theater'], up:null },
 ];
 const SVC = ['markt','kapelle','schule','wirtshaus','theater','feuerwehr','arzt'];
 const SVC_N = { markt:'Markt in Reichweite', kapelle:'Kapelle in Reichweite', schule:'Schule in Reichweite', wirtshaus:'Wirtshaus in Reichweite', theater:'Theater in Reichweite', feuerwehr:'Feuerwehr in Reichweite', arzt:'Arzt in Reichweite' };
@@ -335,7 +341,14 @@ const B = {
   tee:{n:'Teeplantage', s:2, cost:{gold:300, holz:6, werkzeug:2}, up:10, out:'tee', time:15, fert:'tee', unlock:{t:[1,100]}, desc:'Gedeiht nur auf Inseln, die für Tee fruchtbar sind (gelbgrünes Gras, „Tee“ im Inselnamen).'},
   weinberg:{n:'Weinberg', s:2, cost:{gold:400, holz:6, werkzeug:2}, up:12, out:'trauben', time:16, fert:'wein', unlock:{t:[3,1]}, desc:'Gedeiht nur auf Inseln, die für Wein fruchtbar sind („Wein“ im Inselnamen).'},
   weberei:{n:'Weberei', s:1, cost:{gold:200, holz:4, werkzeug:2}, up:8, in:{wolle:2}, out:'stoff', time:15, unlock:{pop:40}, desc:'Webt aus 2 Wolle 1 Stoff.'},
-  schneiderei:{n:'Schneiderei', s:1, cost:{gold:500, holz:4, werkzeug:3, ziegel:6}, up:16, in:{stoff:2}, out:'kleidung', time:18, unlock:{t:[3,1]}, desc:'Näht aus 2 Stoff 1 Kleidung.'},
+  schneiderei:{n:'Schneiderei', s:1, cost:{gold:500, holz:4, werkzeug:3, ziegel:6}, up:16, in:{stoff:2, farbe:1}, out:'kleidung', time:18, unlock:{t:[3,1]}, desc:'Näht aus 2 Stoff und 1 Farbstoff 1 Kleidung.'},
+  faerberei:{n:'Färberei', s:1, cost:{gold:400, holz:4, werkzeug:2, ziegel:4}, up:12, in:{indigo:2}, out:'farbe', time:16, unlock:{t:[3,1]}, desc:'Gewinnt aus 2 Indigo 1 Farbstoff für die Schneiderei.'},
+  glashuette:{n:'Glashütte', s:1, cost:{gold:450, holz:4, werkzeug:3, ziegel:6}, up:14, in:{sand:2, kohle:1}, out:'glas', time:18, unlock:{t:[2,30]}, desc:'Schmilzt aus 2 Sand und 1 Kohle 1 Glas. Bürger und Kaufleute brauchen Glas für den Aufstieg.'},
+  tischlerei:{n:'Tischlerei', s:1, cost:{gold:700, holz:8, werkzeug:4, ziegel:8}, up:18, in:{holz:2, eisen:1}, out:'moebel', time:22, unlock:{t:[3,40]}, desc:'Baut aus 2 Holz und 1 Eisen Möbel für die Aristokraten.'},
+  sandgrube:{n:'Sandgrube', s:1, cost:{gold:150, holz:4}, up:4, out:'sand', time:12, unlock:{t:[2,30]}, desc:'Schaufelt Sand. Muss auf einem Strandfeld direkt am Wasser stehen.'},
+  indigo:{n:'Indigoplantage', s:2, cost:{gold:300, holz:6, werkzeug:2}, up:9, out:'indigo', time:16, fert:'indigo', unlock:{t:[3,1]}, desc:'Gedeiht nur auf Inseln, die für Indigo fruchtbar sind.'},
+  gewuerz:{n:'Gewürzplantage', s:2, cost:{gold:500, holz:6, werkzeug:3}, up:14, out:'gewuerze', time:20, fert:'gewuerz', unlock:{t:[3,40]}, desc:'Gedeiht nur auf Inseln, die für Gewürze fruchtbar sind, meist in den Tropen.'},
+  universitaet:{n:'Universität', s:2, cost:{gold:2500, holz:10, werkzeug:8, ziegel:20, glas:10}, up:30, unlock:{t:[3,30]}, desc:'Sammelt Wissen (10 pro Minute). Wähle die Universität aus, um damit Technologien zu erforschen.'},
   muehle:{n:'Mühle', s:1, cost:{gold:200, holz:6, werkzeug:2}, up:6, in:{getreide:2}, out:'mehl', time:12, unlock:{t:[1,80]}, desc:'Mahlt aus 2 Getreide 1 Mehl.'},
   baecker:{n:'Bäckerei', s:1, cost:{gold:250, holz:4, werkzeug:2, stein:4}, up:8, in:{mehl:1}, out:'brot', amt:2, time:15, unlock:{t:[1,80]}, desc:'Backt aus 1 Mehl 2 Brot.'},
   brauerei:{n:'Brauerei', s:1, cost:{gold:400, holz:6, werkzeug:2, stein:4}, up:12, in:{hopfen:1, getreide:1}, out:'bier', time:15, unlock:{t:[2,1]}, desc:'Braut aus 1 Hopfen und 1 Getreide 1 Bier.'},
@@ -348,9 +361,9 @@ const B = {
   goldschmied:{n:'Goldschmied', s:1, cost:{gold:1200, werkzeug:6, ziegel:12}, up:30, in:{golderz:1}, out:'schmuck', time:25, unlock:{t:[3,60]}, desc:'Fertigt aus 1 Gold 1 Schmuck.'},
 };
 const CATS = [
-  { n:'Siedlung', items:['strasse','haus','kontor','markt','lager','werft','kapelle','schule','feuerwehr','arzt','wirtshaus','theater','kathedrale'] },
-  { n:'Rohstoffe', items:['holzfaeller','foerster','fischer','steinbruch','tongrube','erzmine','goldmine','schaf','getreide','hopfen','rinder','tee','weinberg'] },
-  { n:'Werkstätten', items:['weberei','schneiderei','muehle','baecker','brauerei','metzgerei','kelterei','koehlerei','schmelze','schmiede','ziegelei','goldschmied'] },
+  { n:'Siedlung', items:['strasse','haus','kontor','markt','lager','werft','kapelle','schule','feuerwehr','arzt','wirtshaus','theater','universitaet','kathedrale'] },
+  { n:'Rohstoffe', items:['holzfaeller','foerster','fischer','steinbruch','tongrube','sandgrube','erzmine','goldmine','schaf','getreide','hopfen','rinder','tee','weinberg','indigo','gewuerz'] },
+  { n:'Werkstätten', items:['weberei','faerberei','schneiderei','muehle','baecker','brauerei','metzgerei','kelterei','koehlerei','schmelze','schmiede','ziegelei','glashuette','tischlerei','goldschmied'] },
 ];
 const PAINT = new Set(['strasse','haus','abriss']);
 // residents of a tier or above
@@ -375,6 +388,7 @@ const GOALS = [
   { t:'Brenne Ziegel', h:'Eine Tongrube am Ufer beliefert die Ziegelei.', ok:()=>cnt('tongrube')>=1&&cnt('ziegelei')>=1, r:300 },
   { t:'Baue ein Wirtshaus', h:'Nur in Reichweite eines Wirtshauses werden Bürger zu Kaufleuten.', ok:()=>cnt('wirtshaus')>=1, r:400 },
   { t:'Erreiche 50 Kaufleute', h:'Kaufleute wollen Fleisch, Kleidung und Wein.', ok:()=>atLeast(3)>=50, r:600 },
+  { t:'Erforsche eine Technologie', h:'Eine Universität sammelt Wissen, mit dem du Verbesserungen freischaltest.', ok:()=>G.techs&&G.techs.size>=1, r:600 },
   { t:'Baue ein Theater', h:'Nur in Reichweite eines Theaters werden Kaufleute zu Aristokraten.', ok:()=>cnt('theater')>=1, r:800 },
   { t:'Erreiche 50 Aristokraten', h:'Aristokraten verlangen zusätzlich Schmuck vom Goldschmied.', ok:()=>atLeast(4)>=50, r:1000 },
   { t:'Errichte eine Kathedrale', h:'Ab 100 Aristokraten verfügbar.', ok:()=>cnt('kathedrale')>=1, r:2000 },
@@ -589,6 +603,12 @@ function genMapV2(seed){
 function finishMap(M,ver){
   if (ver!==2) for (const c of M.comps) c.biome = c.tee ? 'tropisch' : 'gemaessigt';
   M.ver=ver;
+  { const r3=mulberry32(M.seed+9091), others=M.comps.filter(c=>c.id!==M.home);
+    for (const c of others){ const B0=c.biome;
+      c.indigo = B0==='tropisch' ? r3()<.5 : B0==='vulkan' ? r3()<.35 : B0==='heide' ? r3()<.3 : r3()<.12;
+      c.gewuerz = B0==='tropisch' ? r3()<.65 : B0==='vulkan' ? r3()<.35 : r3()<.06; }
+    for (const k of ['indigo','gewuerz']) if (others.length && !others.some(c=>c[k])) (others.find(c=>c.biome==='tropisch')||others[0])[k]=true;
+    const hm=M.comps[M.home]; if (hm){ hm.indigo=false; hm.gewuerz=false; } }
   const near=new Int16Array(N*N).fill(-1), q=[];
   for (let i=0;i<N*N;i++) if (M.isl[i]>=0){ near[i]=M.isl[i]; q.push(i); }
   for (let h=0;h<q.length;h++){ const i=q[h], x=i%N, y=(i/N)|0;
@@ -608,9 +628,32 @@ function freshGrids(){ own=new Uint8Array(N*N); conn=new Uint8Array(N*N); for (c
 function emptyGoods(){ const o={}; for (const g of GK) o[g]=0; return o; }
 const fullSup = () => { const o={}; for (const g of GK) o[g]=1; return o; };
 const SHIP_NAMES=['Seeschwalbe','Albatros','Nordwind','Perle','Kormoran','Silbermöwe','Fortuna','Morgenstern','Delphin','Windspiel'];
-const SHIP_COST={gold:1200, holz:30, stoff:10, werkzeug:8}, SHIP_TIME=90, MAX_SHIPS=10;
+const MAX_SHIPS=10;
+const SHIPTYPES={
+  schaluppe:{ n:'Schaluppe', cap:80, speed:4.2, cost:{gold:700, holz:20, stoff:6, werkzeug:4}, time:60, scale:.82, masts:[[.06,36]], d:'Klein und schnell.' },
+  kogge:{ n:'Kogge', cap:160, speed:3.2, cost:{gold:1200, holz:30, stoff:10, werkzeug:8}, time:90, scale:1, masts:[[.06,42]], d:'Der solide Allrounder.' },
+  fleute:{ n:'Fleute', cap:300, speed:2.5, cost:{gold:2400, holz:50, stoff:18, werkzeug:12, eisen:6}, time:140, scale:1.22, masts:[[.42,32],[.04,42],[-.38,30]], d:'Riesiger Laderaum, aber träge.', unlock:{t:[3,1]} },
+};
+const TECHS=[
+  { k:'werkzeuge', n:'Bessere Werkzeuge', c:60, d:'Rohstoffbetriebe arbeiten 15 % schneller.' },
+  { k:'fruchtwechsel', n:'Fruchtwechsel', c:80, d:'Felder, Weiden und Plantagen tragen 25 % mehr.' },
+  { k:'laderaum', n:'Größere Laderäume', c:60, d:'Alle Schiffe fassen 25 % mehr.' },
+  { k:'rumpf', n:'Schnelle Rümpfe', c:60, d:'Eigene Schiffe segeln 20 % schneller.' },
+  { k:'lagerkunde', n:'Lagerkunde', c:70, d:'Alle Insellager fassen 50 % mehr.' },
+  { k:'brandschutz', n:'Brandschutz', c:60, d:'Brände sind seltener, die Feuerwehr reicht 3 Felder weiter.' },
+  { k:'medizin', n:'Medizin', c:60, d:'Seuchen sind seltener, der Arzt reicht 3 Felder weiter.' },
+  { k:'manufaktur', n:'Manufakturen', c:100, d:'Werkstätten arbeiten 20 % schneller.' },
+  { k:'bodenkunde', n:'Bodenkunde', c:150, d:'Plantagen dürfen auch auf Inseln ohne passende Fruchtbarkeit stehen, tragen dort aber nur halb so viel.' },
+  { k:'steuerwesen', n:'Steuerwesen', c:120, d:'Alle Steuereinnahmen steigen um 10 %.' },
+];
+const hasTech = k => !!(G && G.techs && G.techs.has(k));
+const TAXM=[.7,1,1.4], TAXH=[.08,0,-.12], TAXN=['niedrig','normal','hoch'];
+const FERT_N={ tee:'Tee', wein:'Wein', indigo:'Indigo', gewuerz:'Gewürze' };
+const shipCap = s => Math.round(s.cap*(hasTech('laderaum')?1.25:1));
+const shipSpeed = s => (s.speed||3.2)*(hasTech('rumpf')?1.2:1);
+const shipTime = b => (SHIPTYPES[b.shipType]||SHIPTYPES.kogge).time;
 const ORE_MAX=100, GOLD_MAX=60;
-function makeShip(id,name,x,y,cap){ return { id, name, x, y, path:[], ang:.8, da:.8, cargo:emptyGoods(), cap, route:null, rwait:0 }; }
+function makeShip(id,name,x,y,cap,type='kogge'){ return { id, name, x, y, path:[], ang:.8, da:.8, cargo:emptyGoods(), cap, type, speed:SHIPTYPES[type].speed, route:null, rwait:0 }; }
 function newState(seed, demo, ver=2, n=MAP_N){
   N = ver===1 ? 80 : n;
   const map = finishMap(ver===1 ? genMapV1(seed) : genMapV2(seed), ver);
@@ -620,7 +663,7 @@ function newState(seed, demo, ver=2, n=MAP_N){
     treeEdits:new Map(), saplings:new Map(), oreRes:new Float32Array(N*N), fish:new Float32Array(N*N),
     ships:[], nextShip:1, trader:{ st:'away', tm:75, x:0, y:0, path:[], ang:0, isl:-1, disc:1 }, goal:0, unlocked:new Set(), allowUp:true,
     pop:0, popT:TIERS.map(()=>0), taxRate:0, upkeepRate:0, cnt:{}, hubIds:new Set(), dirty:true, terrDirty:true,
-    tierSeen:TIERS.map((_,i)=>i===0), warnT:{}, won:false, secAcc:0, anim:0, events:[], nextEvent:600, curIsle:-1,
+    tierSeen:TIERS.map((_,i)=>i===0), warnT:{}, won:false, secAcc:0, anim:0, events:[], nextEvent:600, curIsle:-1, techs:new Set(), rp:0, taxLv:TIERS.map(()=>1),
   };
   for (let i=0;i<N*N;i++){ if (map.ore[i]) g.oreRes[i]=ORE_MAX; else if (map.gold[i]) g.oreRes[i]=GOLD_MAX; if (map.T[i]<=2) g.fish[i]=1; }
   // ship near home
@@ -665,7 +708,7 @@ function recompute(){
     const d=B[b.t], cx=b.x+d.s/2, cy=b.y+d.s/2;
     if (d.hub) G.hubIds.add(b.id);
     if (d.influence){ const id=b.isl; circle(cx,cy,d.influence,i=>{ if (M.isl[i]===id) own[i]=1; }); }
-    if (d.radius){ const g = cov[d.hub?'markt':d.svc]; circle(cx,cy,d.radius,i=>{ g[i]=1; }); }
+    if (d.radius){ const g = cov[d.hub?'markt':d.svc]; circle(cx,cy,d.radius+((d.svc==='feuerwehr'&&hasTech('brandschutz'))||(d.svc==='arzt'&&hasTech('medizin'))?3:0),i=>{ g[i]=1; }); }
     const add = b.t==='kontor'?50 : b.t==='markt'?20 : b.t==='lager'?(d.store||40) : 0;
     if (add) G.caps[b.isl]=(G.caps[b.isl]||30)+add;
   }
@@ -720,7 +763,7 @@ function nearAny(x,y,s,pred){
 function unlockText(u){ if(!u) return ''; if (u.pop) return `Ab ${u.pop} Einwohnern`; if (u.t) return u.t[1]===1 ? `Mit den ersten ${TIERS[u.t[0]].dat}` : `Ab ${u.t[1]} ${TIERS[u.t[0]].dat}`; return ''; }
 function isUnlocked(type){ const u=B[type].unlock; if(!u) return true; return G.unlocked.has(type); }
 function costOf(type){ return (type==='kontor' && !cnt('kontor')) ? {} : B[type].cost; }
-const capOf = isl => G.caps[isl]||0;
+const capOf = isl => Math.floor((G.caps[isl]||0)*(hasTech('lagerkunde')?1.5:1));
 function missing(cost, isl){ const st=G.stores[isl]; for (const k in cost){ const have = k==='gold'?G.gold:(st?st[k]:0); if (have < cost[k]) return k; } return null; }
 function pay(cost, isl, f=1){ const st=G.stores[isl]; for (const k in cost){ if (k==='gold') G.gold-=cost[k]*f; else if (st) st[k]-=cost[k]*f; } }
 function kontorShip(x,y){ let best=null, bd=7.5; for (const s of G.ships){ const d=Math.hypot(s.x-(x+1),s.y-(y+1)); if (d<=bd){ bd=d; best=s; } } return best; }
@@ -753,7 +796,9 @@ function canPlace(type,x,y){
   if (type==='steinbruch' && !nearAny(x,y,s,i=>M.T[i]===5)) return { ok:false, why:'Der Steinbruch muss an einen Berg grenzen.' };
   if (type==='erzmine' && !nearAny(x,y,s,i=>M.ore[i])) return { ok:false, why:'Hier gibt es kein Erzvorkommen. Suche rötlich gesprenkelte Berge.' };
   if (type==='goldmine' && !nearAny(x,y,s,i=>M.gold[i])) return { ok:false, why:'Hier gibt es kein Goldvorkommen. Suche golden funkelnde Berge.' };
-  if (d.fert && !M.comps[isle][d.fert]) return { ok:false, why:`Diese Insel ist nicht fruchtbar für ${d.fert==='tee'?'Tee':'Wein'}.` };
+  if (d.fert && !M.comps[isle][d.fert] && !hasTech('bodenkunde')) return { ok:false, why:`Diese Insel ist nicht fruchtbar für ${FERT_N[d.fert]}. Mit der Technologie Bodenkunde geht es trotzdem, zu halbem Ertrag.` };
+  if (type==='sandgrube'){ for (let yy=y; yy<y+s; yy++) for (let xx=x; xx<x+s; xx++) if (M.T[yy*N+xx]!==3) return { ok:false, why:'Die Sandgrube muss auf einem Strandfeld stehen.' };
+    if (!nearAny(x,y,s,i=>M.T[i]<=2)) return { ok:false, why:'Die Sandgrube muss direkt am Wasser stehen.' }; }
   const m = missing(costOf(type), isle);
   if (m) return { ok:false, why: m==='gold' ? 'Nicht genug Gold.' : `Nicht genug ${GOODS[m].n} im Lager dieser Insel.` };
   return { ok:true, isle };
@@ -823,6 +868,7 @@ function step(dt){
   for (const s of G.ships) routeTick(s,dt);
   werftTick(dt);
   eventsTick(dt);
+  for (const b of G.buildings) if (b.t==='universitaet' && !(b.build<1) && !(b.fire>0) && b.on) G.rp+=dt*10/60;
   G.secAcc+=dt;
   if (G.secAcc>=1){ G.secAcc=0; natureTick(1); checkUnlocks(); checkGoals(); warnings(); }
   if (G.treesDirty) recountTrees();
@@ -846,6 +892,10 @@ function produce(b,d,dt,broke){
   else {
     if (b.out>0){ const room=Math.max(0,Math.floor(cap-st[d.out])); const n=Math.min(room,b.out); st[d.out]+=n; b.out-=n; if (n>0) spawnCarrier(b,d.out); }
     mult *= evMult(b);
+    if (FARMS.has(b.t) || b.t==='schaf' || b.t==='rinder'){ if (hasTech('fruchtwechsel')) mult*=1.25; }
+    else if (d.in){ if (hasTech('manufaktur')) mult*=1.2; }
+    else if (hasTech('werkzeuge')) mult*=1.15;
+    if (d.fert && !G.map.comps[b.isl][d.fert]) mult*=.5;
     if (b.t==='holzfaeller'){ mult *= Math.min(1,(b.trees||0)/8); zero='Kein Wald in der Nähe'; }
     if (b.t==='erzmine'||b.t==='goldmine'){ if (reserveOf(b)<1){ mult=0; zero='Vorkommen erschöpft'; } }
     if (b.t==='fischer'){ const f=fishLevel(b); mult *= Math.min(1,f*1.25); zero = G.events.some(e=>e.k==='storm') ? 'Sturm: Die Boote bleiben im Hafen' : 'Keine Fische mehr'; }
@@ -893,19 +943,25 @@ function housing(dt){
     for (const g of GK){
       if (dm[g]>0){ const have=st?st[g]:0, f=Math.min(1,have/dm[g]); if (st) st[g]=Math.max(0,have-dm[g]*f); sp[g]+=(f-sp[g])*a; }
       else sp[g]+=(1-sp[g])*a; } }
-  let tax=0, pop=0; const pt=TIERS.map(()=>0); const bonus=cnt('kathedrale')?1.1:1;
+  let tax=0, pop=0; const pt=TIERS.map(()=>0); const bonus=(cnt('kathedrale')?1.1:1)*(hasTech('steuerwesen')?1.1:1);
   for (const b of hs){
-    const T=TIERS[b.tier], i=b.y*N+b.x, sp=G.sup[b.isl]||fullSup();
-    let s=0, n=0;
-    for (const g in T.needs){ s+=sp[g]; n++; }
+    const T=TIERS[b.tier], i=b.y*N+b.x, sp=G.sup[b.isl]||fullSup(), lv=(G.taxLv&&G.taxLv[b.tier])??1;
+    let s=0, n=0, ls=0, ln=0;
+    for (const g in T.needs){ if (T.lux.includes(g)){ ls+=sp[g]; ln++; } else { s+=sp[g]; n++; } }
     for (const sv of T.svc){ s+=covOf(sv)[i]?1:0; n++; }
-    let h=s/n; if (b.sick>0) h*=.6; if (b.fire>0) h*=.3; b.happy=h;
+    const lux = ln ? ls/ln : 1;
+    let h=Math.max(0,Math.min(1,s/n+TAXH[lv])); if (b.sick>0) h*=.6; if (b.fire>0) h*=.3; b.happy=h; b.lux=lux;
     if (h>.72) b.res=Math.min(T.max,b.res+dt*.15); else if (h<.45) b.res=Math.max(1,b.res-dt*.06);
     if (b.res>T.max) b.res=T.max;
-    tax += b.res*T.tax*(.35+.65*h)*bonus*dt/60;
+    tax += b.res*T.tax*TAXM[lv]*(.35+.65*h)*(.75+.5*lux)*bonus*dt/60;
+    // long shortage of basic needs: the house drops a tier
+    if (b.tier>0 && h<.4){ b.downT=(b.downT||0)+dt;
+      if (b.downT>60){ b.downT=0; b.tier--; b.res=Math.min(b.res,TIERS[b.tier].max); G.dirty=true;
+        const key='down'+b.isl; if (!G.warnT[key] || G.t-G.warnT[key]>60){ G.warnT[key]=G.t; toast(`Auf ${islName(b.isl)} ist ein Haus zu ${TIERS[b.tier].n} abgestiegen. Es fehlt an Grundbedarf.`,'warn'); } } }
+    else b.downT=Math.max(0,(b.downT||0)-dt*2);
     const NX=TIERS[b.tier+1];
     b.upMiss=null;
-    if (NX && G.allowUp && !(b.sick>0) && b.res>=T.max-.05 && h>=.9 && NX.svc.every(sv=>covOf(sv)[i])){
+    if (NX && G.allowUp && !(b.sick>0) && b.res>=T.max-.05 && h>=.9 && lux>=.6 && NX.svc.every(sv=>covOf(sv)[i])){
       b.upT+=dt;
       if (b.upT>=12){
         const m=missing(T.up,b.isl);
@@ -986,40 +1042,53 @@ function dockXY(k){ const d=dockFor(k); return d==null ? null : [d%N+.5,((d/N)|0
 function dockedAt(s){ if (s.moving) return null; for (const k of G.buildings) if (k.t==='kontor' && !(k.build<1)){ const p=dockXY(k); if (p && Math.hypot(s.x-p[0],s.y-p[1])<2.4) return k; } return null; }
 function transfer(s,isl,g,n){ // n>0: store -> ship, n<0: ship -> store
   const st=G.stores[isl]; if (!st) return 0;
-  if (n>0){ const m=Math.min(n,Math.floor(st[g]),s.cap-cargoTotal(s)); if (m<=0) return 0; st[g]-=m; s.cargo[g]+=m; return m; }
+  if (n>0){ const m=Math.min(n,Math.floor(st[g]),shipCap(s)-cargoTotal(s)); if (m<=0) return 0; st[g]-=m; s.cargo[g]+=m; return m; }
   const m=Math.min(-n,s.cargo[g],Math.max(0,Math.floor(capOf(isl)-st[g]))); if (m<=0) return 0; s.cargo[g]-=m; st[g]+=m; return m;
 }
-// trade route: sail between two own kontors, unload what is meant for this port, load what goes to the other one
+// trade routes: up to four stops; at each stop unload (up to a target stock) and load (keeping a reserve)
+function normRoute(r){
+  if (r && !r.stops && r.a!=null){
+    const A={ isl:r.a, act:{} }, Bs={ isl:r.b, act:{} };
+    for (const g in r.goods){ if (r.goods[g]===1){ A.act[g]={m:'load',n:0}; Bs.act[g]={m:'unload',n:0}; } else if (r.goods[g]===-1){ Bs.act[g]={m:'load',n:0}; A.act[g]={m:'unload',n:0}; } }
+    r.stops=[A,Bs]; r.idx=r.leg||0; delete r.a; delete r.b; delete r.goods; delete r.leg;
+  }
+  return r;
+}
 function routeTick(s,dt){
-  const r=s.route; if (!r || !r.on) return;
-  const A=kontorOn(r.a), Bk=kontorOn(r.b);
-  if (!A || !Bk){ r.on=false; toast(`${s.name}: Die Route ist unterbrochen, ein Hafen fehlt.`,'warn'); return; }
+  const r=normRoute(s.route); if (!r || !r.on) return;
+  if (r.stops.length<2){ r.on=false; return; }
+  r.idx%=r.stops.length;
+  const stop=r.stops[r.idx], k=kontorOn(stop.isl);
+  if (!k){ r.on=false; toast(`${s.name}: Die Route ist unterbrochen, ein Hafen fehlt.`,'warn'); return; }
   if (s.path.length) return;
-  const here=r.leg===0?r.a:r.b, there=r.leg===0?r.b:r.a, k=r.leg===0?A:Bk, p=dockXY(k);
-  if (!p){ r.on=false; return; }
+  const p=dockXY(k); if (!p){ r.on=false; return; }
   if (Math.hypot(s.x-p[0],s.y-p[1])>1.2){
     const path=shipPath(s.x,s.y,Math.floor(p[0]),Math.floor(p[1]));
-    if (path && path.length){ s.path=path; s.rst=`Segelt nach ${islName(here)}`; }
-    else { r.on=false; toast(`${s.name} findet keinen Weg nach ${islName(here)}.`,'warn'); }
+    if (path && path.length){ s.path=path; s.rst=`Segelt nach ${islName(stop.isl)}`; }
+    else { r.on=false; toast(`${s.name} findet keinen Weg nach ${islName(stop.isl)}.`,'warn'); }
     return;
   }
-  s.rwait=(s.rwait||0)+dt; s.rst=`Lädt in ${islName(here)}`;
+  s.rwait=(s.rwait||0)+dt; s.rst=`Lädt in ${islName(stop.isl)}`;
   if (s.rwait<3) return;
   s.rwait=0;
-  const destOf = g => r.goods[g]===1 ? r.b : r.goods[g]===-1 ? r.a : null;
-  for (const g of GK) if (s.cargo[g]>0 && destOf(g)===here) transfer(s,here,g,-s.cargo[g]);
-  const outs=GK.filter(g=>destOf(g)===there);
-  if (outs.length){ const share=Math.floor((s.cap-cargoTotal(s))/outs.length); for (const g of outs) transfer(s,here,g,share); }
-  r.leg=1-r.leg;
+  const st=G.stores[stop.isl], cap=capOf(stop.isl);
+  if (st){
+    for (const g in stop.act){ const a=stop.act[g]; if (a.m!=='unload' || !s.cargo[g]) continue;
+      const target=a.n>0?Math.min(a.n,cap):cap; transfer(s,stop.isl,g,-Math.min(s.cargo[g],Math.max(0,Math.floor(target-st[g])))); }
+    const loads=Object.keys(stop.act).filter(g=>stop.act[g].m==='load');
+    if (loads.length){ const share=Math.floor((shipCap(s)-cargoTotal(s))/loads.length);
+      for (const g of loads) transfer(s,stop.isl,g,Math.min(share,Math.max(0,Math.floor(st[g]-stop.act[g].n)))); }
+  }
+  r.idx=(r.idx+1)%r.stops.length;
 }
 function werftTick(dt){
   for (const b of G.buildings){ if (b.t!=='werft' || b.shipT==null || b.build<1 || b.fire>0) continue;
     b.shipT+=dt; b.st='Baut ein Schiff';
-    if (b.shipT>=SHIP_TIME){ b.shipT=null; b.st='Bereit';
+    if (b.shipT>=shipTime(b)){ b.shipT=null; b.st='Bereit'; const ST=SHIPTYPES[b.shipType]||SHIPTYPES.kogge;
       let w=null; border(b.x,b.y,2,i=>{ if (w==null && nav(i)) w=i; }); if (w==null) continue;
       const used=new Set(G.ships.map(s=>s.name)), nm=SHIP_NAMES.find(n=>!used.has(n))||('Schiff '+G.nextShip);
-      G.ships.push(makeShip(G.nextShip++,nm,w%N+.5,((w/N)|0)+.5,160));
-      toast(`Die ${nm} ist vom Stapel gelaufen.`,'good'); }
+      G.ships.push(makeShip(G.nextShip++,nm,w%N+.5,((w/N)|0)+.5,ST.cap,b.shipType||'kogge'));
+      toast(`Die ${ST.n} ${nm} ist vom Stapel gelaufen.`,'good'); }
   }
 }
 function traderTick(dt){
@@ -1097,8 +1166,8 @@ function eventsTick(dt){
 function triggerEvent(){
   const built=G.buildings.filter(b=>!(b.build<1)), houses=built.filter(b=>b.t==='haus'), farms=built.filter(b=>FARMS.has(b.t)), fishers=built.filter(b=>b.t==='fischer');
   const opts=[];
-  if (built.length>=6) opts.push(['fire',.3]);
-  if (houses.filter(h=>h.tier>=1).length>=3) opts.push(['plague',.16]);
+  if (built.length>=6) opts.push(['fire',hasTech('brandschutz')?.12:.3]);
+  if (houses.filter(h=>h.tier>=1).length>=3) opts.push(['plague',hasTech('medizin')?.06:.16]);
   opts.push(['storm',.15]);
   if (farms.length) opts.push(['blight',.11],['harvest',.12]);
   if (fishers.length) opts.push(['shoal',.1]);
@@ -1805,6 +1874,65 @@ function drawStatic(c,type,cx,cy,o){
     c.fillStyle='#3f9a5a'; c.fillRect(cx-14.2,cy-12.6,1.4,3.6); c.fillRect(cx-15,cy-11.6,3,1.4);
     bush(c,cx+17,cy+5,2.6); bush(c,cx+20,cy+3,2,'#6aa04a');
     break; }
+  case 'sandgrube': {
+    softShadow(c,cx,cy+1,20,8);
+    P(c,[[cx,cy-14],[cx+28,cy],[cx,cy+14],[cx-28,cy]],'rgba(225,205,150,.55)');
+    E(c,cx+7,cy+4,10,5,'#c9ae72'); E(c,cx+7,cy+3,7,3.2,'#ead7a2');
+    E(c,cx-13,cy+7,6,3,'#e8d6a2'); E(c,cx-13,cy+5.5,4,2,'#f4e6bc');
+    box(c,cx-9,cy-6,6,3,6,'#9a7a52','plank'); pyramid(c,cx-9,cy-6,6,3,6,6,'#b89a58',true);
+    c.strokeStyle='#6b4a2e'; c.lineWidth=.8; c.beginPath(); ln(c,[cx+15,cy-2],[cx+15,cy-9]); ln(c,[cx+21,cy+1],[cx+21,cy-6]); ln(c,[cx+15,cy-9],[cx+21,cy-6]); c.stroke();
+    c.strokeStyle='rgba(80,60,40,.5)'; c.lineWidth=.4; c.beginPath(); for (let k=1;k<4;k++) ln(c,[cx+15+k*1.5,cy-8.3+k*.75],[cx+15+k*1.5,cy-1.3+k*.75]); c.stroke();
+    break; }
+  case 'glashuette': {
+    softShadow(c,cx+3,cy+2,22,10);
+    box(c,cx-2,cy-1,14,7,12,'#b8a48c','stone');
+    const FL=face(cx-2,cy-1,14,7,'L'); win(c,FL,.15,3,.24,4.5,{lit:true}); win(c,FL,.6,3,.24,4.5,{lit:true});
+    door(c,face(cx-2,cy-1,14,7,'R'),.36,.28,8,'#4a3a2a');
+    gable(c,cx-2,cy-1,14,7,12,9,'#5a4a4a','#b8a48c');
+    box(c,cx+6,cy-12,3.4,1.7,16,'#a4583e','brick');
+    for (let k=0;k<4;k++) E(c,cx+14+k*2.4,cy+8-k*1.2,1,1.8,['#9fd0e0','#7fb8a0','#c8e4ee','#a8c890'][k]);
+    c.fillStyle='#7a5634'; c.fillRect(cx+12,cy+9,10,1.6);
+    break; }
+  case 'indigo': case 'gewuerz': {
+    const g=[.4,.64,.85,1][o.stage??3], ind=type==='indigo';
+    fieldBase(c,cx,cy,58,29,ind?'#5f7a48':'#8a5a36');
+    for (let r=-4;r<=4;r++) for (let k=-5;k<=5;k++){ const bx=cx+(r+k)*5.4, by=cy+(k-r)*2.7; if (Math.abs(r)+Math.abs(k)>7) continue; if (r<=-2&&k<=0&&k>-5) continue;
+      E(c,bx+1,by+1,3.6*g,1.4*g,'rgba(20,30,10,.3)');
+      if (ind){ E(c,bx,by-2*g,2.6*g,3.2*g,'#3f6a3a'); E(c,bx-.5,by-3*g,1.6*g,1.8*g,'#5a8a4a'); if (g>.8) E(c,bx+.6,by-4.4,1,1,'#5a6ac0'); }
+      else { E(c,bx,by-1.6*g,3.4*g,2.4*g,'#3f6a2a'); E(c,bx-.6,by-2.4*g,2*g,1.4*g,'#5f8a3a'); if (g>.8){ E(c,bx+.9,by-2,.7,.7,'#c8402a'); E(c,bx-1.1,by-1.4,.6,.6,'#e0a030'); } } }
+    softShadow(c,cx-22,cy-9,14,6);
+    box(c,cx-22,cy-10,10,5,9,'#c8b48a','plank'); door(c,face(cx-22,cy-10,10,5,'R'),.35,.35,7,'#5a3a22');
+    pyramid(c,cx-22,cy-10,10,5,9,10,ind?'#7a8aa8':'#b89a58',true);
+    if (ind){ E(c,cx-11,cy-2,3,1.5,'#4a5a8a'); E(c,cx-11,cy-2.6,2.4,1,'#3a4aa0'); }
+    break; }
+  case 'faerberei': {
+    const wall='#efe4c9';
+    softShadow(c,cx+3,cy+2,20,9);
+    box(c,cx-4,cy-2,13,6.5,14,wall,'timber:#4a3a30');
+    win(c,face(cx-4,cy-2,13,6.5,'L'),.2,4,.22,4.5); door(c,face(cx-4,cy-2,13,6.5,'R'),.36,.28,8,'#3f4a6a');
+    gable(c,cx-4,cy-2,13,6.5,14,10,'#3f4a6a',wall);
+    for (const [vx,vy,col] of [[cx+12,cy+6,'#3a4aa0'],[cx+18,cy+3,'#a83a3a'],[cx+8,cy+10,'#d8a83a']]){ E(c,vx+1,vy+1.2,4,1.6,'rgba(0,0,0,.25)'); c.fillStyle='#7a5634'; c.fillRect(vx-3.4,vy-3,6.8,3); E(c,vx,vy,3.4,1.4,'#6a4a2a'); E(c,vx,vy-3,3.4,1.4,'#8a6440'); E(c,vx,vy-3,2.8,1,col); }
+    break; }
+  case 'tischlerei': {
+    softShadow(c,cx+3,cy+2,22,10);
+    box(c,cx-3,cy-1,14,7,12,'#9a7448','plank');
+    win(c,face(cx-3,cy-1,14,7,'L'),.2,4,.24,4,{frame:'#6a4a2a'}); door(c,face(cx-3,cy-1,14,7,'R'),.32,.36,8,'#4a3020');
+    gable(c,cx-3,cy-1,14,7,12,9,'#5a3a2a','#9a7448');
+    for (let k=0;k<4;k++) box(c,cx+15,cy+7-k*1.1,7,1.2,1,['#c49460','#b08050','#d0a070','#b88a58'][k],'plank');
+    c.fillStyle='#8a5a32'; c.fillRect(cx-19,cy+2,1.2,7); c.fillRect(cx-14,cy+4,1.2,5); c.fillStyle='#b07a42'; c.fillRect(cx-19,cy+4,6,1.4); c.fillRect(cx-18.2,cy-1,3.6,1.2);
+    break; }
+  case 'universitaet': {
+    plaza(c,cx,cy,58,29,'#d4c9b2',51);
+    softShadow(c,cx,cy+2,50,22,.35);
+    const wall='#e8dcc4';
+    box(c,cx-10,cy-6,26,13,22,wall,'stone');
+    const FL=face(cx-10,cy-6,26,13,'L'); for (const u of [.1,.32,.54,.76]){ win(c,FL,u,4,.1,6,{glass:'#3a4660'}); win(c,FL,u,13,.1,5,{glass:'#3a4660'}); }
+    gable(c,cx-10,cy-6,26,13,22,12,'#4a5a6a',wall);
+    box(c,cx+20,cy+8,10,5,16,wall,'stone'); door(c,face(cx+20,cy+8,10,5,'R'),.3,.4,9,'#4a2a22'); gable(c,cx+20,cy+8,10,5,16,8,'#4a5a6a',wall);
+    box(c,cx+14,cy-10,6,3,30,wall,'stone');
+    c.fillStyle=vgrad(c,cy-50,cy-38,'#9ab8c8','#5a7a8a'); c.beginPath(); c.ellipse(cx+14,cy-40,6.5,8,0,Math.PI,0); c.fill(); E(c,cx+14,cy-40,6.5,1.8,'#4a6a7a');
+    c.strokeStyle='#3a3a40'; c.lineWidth=1.2; c.beginPath(); ln(c,[cx+15,cy-45],[cx+22,cy-50]); c.stroke();
+    break; }
   }
 }
 function drawAnim(c,type,cx,cy,o){
@@ -1814,6 +1942,7 @@ function drawAnim(c,type,cx,cy,o){
     if (o.detail){ if (tr>=1) litWindows(c,tr,sd,cx,cy,t); if (tr===0) chickens(c,cx,cy,t,sd); if (tr===1 && hspec(1,sd).extra==='laundry') laundry(c,hspec(1,sd),cx,cy,t); }
     break; }
   case 'koehlerei': if (act) smoke(c,cx+5,cy-8,t,true,.45); break;
+  case 'glashuette': if (act) smoke(c,cx+6,cy-29,t,false,.4); break;
   case 'werft': if (o.prog>=0){ const p=o.prog, k0=[cx-2,cy-10], k1=[cx+22,cy+2];
       c.strokeStyle='#5a3a22'; c.lineWidth=1.6; c.beginPath(); ln(c,k0,lerp2(k0,k1,Math.min(1,.3+p))); c.stroke();
       const ribs=Math.floor(2+p*9); c.strokeStyle='#8a6440'; c.lineWidth=1.1; c.beginPath();
@@ -1855,7 +1984,7 @@ function drawAnim(c,type,cx,cy,o){
 function drawB(c,type,cx,cy,o){ drawStatic(c,type,cx,cy,o); drawAnim(c,type,cx,cy,o); }
 
 // ============================================================ sprites
-const FARMS=new Set(['getreide','hopfen','tee','weinberg']);
+const FARMS=new Set(['getreide','hopfen','tee','weinberg','indigo','gewuerz']);
 const SPR=matchMedia('(pointer: coarse)').matches?2.2:3, sprites=new Map();
 function sprite(key,w,h,ay,draw){
   let s=sprites.get(key); if (s) return s;
@@ -1947,7 +2076,8 @@ function drawTreeS(c,x,y,v){
 }
 function drawShip(c,s,kind,t){
   const bob=Math.sin(t*2+s.x)*1.2;
-  const px=isoX(s.x,s.y), py=isoY(s.x,s.y)+bob;
+  const px=isoX(s.x,s.y), py=isoY(s.x,s.y)+bob, ST=kind==='trader'?null:(SHIPTYPES[s.type]||SHIPTYPES.kogge), sc=ST?ST.scale:1;
+  c.save(); c.translate(px,py); c.scale(sc,sc); c.translate(-px,-py);
   const ca=Math.cos(s.da), sa=Math.sin(s.da);
   const pr=(f,q,z=0)=>{ const dx=f*ca-q*sa, dy=f*sa+q*ca; return [px+(dx-dy)*HW, py+(dx+dy)*HH-z]; };
   if (s.moving){ for (let k=0;k<4;k++){ const w=pr(-.75-k*.4,0); E(c,w[0],w[1]+2,5+k*4.5,2+k*1.6,`rgba(255,255,255,${(.32-k*.075).toFixed(3)})`); }
@@ -1966,7 +2096,7 @@ function drawShip(c,s,kind,t){
   c.save(); path(c,deck); c.clip(); c.strokeStyle='rgba(90,60,30,.35)'; c.lineWidth=.5; c.beginPath();
   for (let q=-.25;q<=.25;q+=.07) ln(c,pr(-.7,q,7),pr(.9,q,7)); c.stroke(); c.restore();
   c.strokeStyle=sh(hullC,.6); c.lineWidth=1; path(c,deck); c.stroke();
-  const masts = kind==='trader' ? [[.32,34],[-.22,40]] : [[.06,42]];
+  const masts = kind==='trader' ? [[.32,34],[-.22,40]] : ST.masts;
   const side=pr(0,.36,0), o0=pr(0,0,0); const vx=side[0]-o0[0], vy=side[1]-o0[1];
   // rigging
   c.strokeStyle='rgba(40,30,20,.55)'; c.lineWidth=.5; c.beginPath();
@@ -1985,6 +2115,7 @@ function drawShip(c,s,kind,t){
   }
   const mt=pr(masts[masts.length-1][0],0,7), fy=mt[1]-masts[masts.length-1][1], fw=Math.sin(t*4)*1.6;
   c.fillStyle=kind==='trader'?'#a83a2a':'#e3a948'; c.beginPath(); c.moveTo(mt[0],fy); c.quadraticCurveTo(mt[0]+6,fy+fw,mt[0]+12,fy+2+fw); c.lineTo(mt[0],fy+5); c.closePath(); c.fill();
+  c.restore();
 }
 
 // ============================================================ mountains: one connected massif per range
@@ -2663,7 +2794,7 @@ function render(rt){
       if (b.build<1) drawConstruction(ctx,b,cx,cy,at);
       else { const d=B[b.t], stg=FARMS.has(b.t)?Math.min(3,Math.floor((b.prog/d.time)*4)):0;
         blit(bSprite(b.t,b.tier||0,v,stg),cx,cy);
-        drawAnim(ctx,b.t,cx,cy,{tier:b.tier,active:b.active&&G.speed>0,t:at,seed:v,detail:z>.6,prog:b.shipT!=null?b.shipT/SHIP_TIME:-1}); }
+        drawAnim(ctx,b.t,cx,cy,{tier:b.tier,active:b.active&&G.speed>0,t:at,seed:v,detail:z>.6,prog:b.shipT!=null?b.shipT/shipTime(b):-1}); }
       if (b.fire>0) drawFire(ctx,b,cx,cy,at); if (b.sick>0) drawSick(ctx,cx,cy,at); }
     else if (o[1]===3) drawShip(ctx,o[2],o[3],t);
     else if (o[1]===4) drawWalker(ctx,o[2]);
@@ -2709,7 +2840,7 @@ function render(rt){
     for (const L of labels){
       const sx=(L.x-cam.x)*z+W/2, sy=(L.y-cam.y)*z+H/2-30*z;
       if (sx<-100||sx>W+100||sy<-40||sy>H+40) continue;
-      const c=L.c, ex=[BIOMES[c.biome]?.n,c.tee&&'Tee',c.wein&&'Wein',c.ore&&'Erz',c.gold&&'Gold',c.mount&&'Stein'].filter(Boolean).join(' · ')||'keine Bodenschätze';
+      const c=L.c, ex=[BIOMES[c.biome]?.n,c.tee&&'Tee',c.wein&&'Wein',c.indigo&&'Indigo',c.gewuerz&&'Gewürze',c.ore&&'Erz',c.gold&&'Gold',c.mount&&'Stein'].filter(Boolean).join(' · ')||'keine Bodenschätze';
       ctx.globalAlpha=la;
       ctx.font='700 15px "Bricolage Grotesque", sans-serif'; ctx.lineWidth=4; ctx.strokeStyle='rgba(13,24,32,.55)'; ctx.strokeText(c.name,sx,sy); ctx.fillStyle='#f6efe0'; ctx.fillText(c.name,sx,sy);
       ctx.font='600 11px Figtree, sans-serif'; ctx.strokeText(ex,sx,sy+15); ctx.fillStyle='#e8c98d'; ctx.fillText(ex,sx,sy+15);
@@ -3008,6 +3139,7 @@ function thumb(cnv,type,w,h){
 // panel
 const panel=$('#panel'); let panelSig='';
 function select(s){
+  if (!s || s.kind!=='ship' || s.id!==sel.id) routePick=-1;
   if (!s){ sel.kind=null; sel.id=0; } else { sel.kind=s.kind; sel.id=s.id||0; }
   if (s && tool && s.kind!=='ship') setTool(null);
   renderPanel(true);
@@ -3018,12 +3150,14 @@ panel.addEventListener('pointerdown',e=>{ if (e.button!==0) return; const b=e.ta
 panel.addEventListener('click',e=>{ if (e.detail!==0) return; const b=e.target.closest('[data-act]'); if (!b || b.disabled) return; act(b.dataset.act); });
 panel.addEventListener('change',e=>{ if (e.target.id==='allowUp'){ G.allowUp=e.target.checked; } });
 function act(a){
-  const [k,v]=a.split(':');
+  const ci=a.indexOf(':'), k=ci<0?a:a.slice(0,ci), v=ci<0?undefined:a.slice(ci+1);
   const b = sel.kind==='b' ? G.byId.get(sel.id) : null;
   if (k==='close') select(null);
   else if (k==='tool') setTool(v);
-  else if (sel.kind==='ship' && ['load','unload','unloadall','ra','rb','rg','routeon','routeoff'].includes(k)) shipAct(k,v);
-  else if (k==='buildship' && b && b.t==='werft'){ if (!missing(SHIP_COST,b.isl) && G.ships.length<MAX_SHIPS){ pay(SHIP_COST,b.isl); b.shipT=0; renderPanel(true); } }
+  else if (sel.kind==='ship' && ['load','unload','unloadall','rs','rdel','rstop','radd','rpick','rm','rn','routeon','routeoff'].includes(k)) shipAct(k,v);
+  else if (k==='buildship' && b && b.t==='werft'){ const T=SHIPTYPES[v||'kogge']; if (T && !missing(T.cost,b.isl) && G.ships.length<MAX_SHIPS){ pay(T.cost,b.isl); b.shipType=v||'kogge'; b.shipT=0; renderPanel(true); } }
+  else if (k==='tech'){ const T=TECHS.find(t=>t.k===v); if (T && !G.techs.has(T.k) && G.rp>=T.c){ G.rp-=T.c; G.techs.add(T.k); G.dirty=true; toast(`Erforscht: ${T.n}. ${T.d}`,'good'); renderPanel(true); } }
+  else if (k==='tax'){ const [ti,lv]=v.split('.').map(Number); G.taxLv[ti]=lv; renderPanel(true); }
   else if (k==='toggle' && b){ b.on=!b.on; renderPanel(true); }
   else if (k==='demolish' && b){ if (panel.dataset.confirm==='1'){ demolishAt(b.x,b.y); panel.dataset.confirm=''; } else { panel.dataset.confirm='1'; renderPanel(true); } }
   else if (k==='buy') trade(v,5);
@@ -3034,7 +3168,7 @@ const pct = v => Math.round(v*100)+' %';
 const barCls = v => v>=.75?'g':v>=.45?'w':'b';
 function fertPills(isle){
   const p=(ok,t)=>`<span class="pill ${ok?'ok':''}">${t} ${ok?'✓':'✕'}</span>`;
-  return `<span class="pill">${BIOMES[isle.biome]?.n||''}</span> `+[p(isle.tee,'Tee'),p(isle.wein,'Wein'),p(isle.ore,'Erz'),p(isle.gold,'Gold'),p(isle.mount,'Stein')].join(' ');
+  return `<span class="pill">${BIOMES[isle.biome]?.n||''}</span> `+[p(isle.tee,'Tee'),p(isle.wein,'Wein'),p(isle.indigo,'Indigo'),p(isle.gewuerz,'Gewürze'),p(isle.ore,'Erz'),p(isle.gold,'Gold'),p(isle.mount,'Stein')].join(' ');
 }
 // goods worth showing: in stock, or used by something already unlocked or by a tier that already lives here
 function knownGoods(){
@@ -3064,20 +3198,22 @@ function renderPanel(force){
         <div class="sec"><div class="btns"><button class="btn danger" data-act="demolish" type="button">${confirm?'Wirklich abreißen?':'Abreißen'}</button></div></div>`;
     } else if (b.t==='haus'){
       const T=TIERS[b.tier], NX=TIERS[b.tier+1], i=b.y*N+b.x;
-      sig=[b.id,b.tier,Math.floor(b.res),Math.round(b.happy*20),b.upMiss,b.upT>0,G.allowUp,confirm,cnt('kapelle'),cnt('schule'),b.sick>0,b.fire>0].join('|');
+      sig=[b.id,b.tier,Math.floor(b.res),Math.round(b.happy*20),Math.round((b.lux??1)*10),b.upMiss,b.upT>0,G.allowUp,confirm,cnt('kapelle'),cnt('schule'),b.sick>0,b.fire>0,G.taxLv[b.tier],(b.downT||0)>20].join('|');
       const sp=G.sup[b.isl]||fullSup();
-      const needs = (b.sick>0?`<p class="note" style="color:var(--bad)">In diesem Haus wütet eine Seuche.${cov.arzt[i]?' Der Arzt behandelt die Kranken.':' Ein Arzt in der Nähe würde helfen.'}</p>`:'')+(b.fire>0?`<p class="note" style="color:var(--bad)">Das Haus brennt!${cov.feuerwehr[i]?' Die Feuerwehr löscht.':' Ohne Feuerwehr brennt es nieder.'}</p>`:'')+Object.keys(T.needs).map(g=>`<div class="row"><span class="l">${icon(g)}${GOODS[g].n}</span><span class="v">${pct(sp[g])}</span></div><div class="bar ${barCls(sp[g])}"><i style="width:${sp[g]*100}%"></i></div>`).join('')
+      const needs = (b.sick>0?`<p class="note" style="color:var(--bad)">In diesem Haus wütet eine Seuche.${cov.arzt[i]?' Der Arzt behandelt die Kranken.':' Ein Arzt in der Nähe würde helfen.'}</p>`:'')+(b.fire>0?`<p class="note" style="color:var(--bad)">Das Haus brennt!${cov.feuerwehr[i]?' Die Feuerwehr löscht.':' Ohne Feuerwehr brennt es nieder.'}</p>`:'')+Object.keys(T.needs).map(g=>`<div class="row"><span class="l">${icon(g)}${GOODS[g].n}${T.lux.includes(g)?' <span class="pill">Luxus</span>':''}</span><span class="v">${pct(sp[g])}</span></div><div class="bar ${barCls(sp[g])}"><i style="width:${sp[g]*100}%"></i></div>`).join('')
         + T.svc.map(sv=>{ const ok=covOf(sv)[i]; return `<div class="row"><span class="l">${SVC_N[sv]}</span><span class="pill ${ok?'ok':'bad'}">${ok?'ja':'nein'}</span></div>`; }).join('');
       let up='';
       if (NX){
         const full=b.res>=T.max-.05, happy=b.happy>=.9, svc=NX.svc.every(sv=>covOf(sv)[i]), mat=!missing(T.up,b.isl);
         const r=(ok,txt)=>`<div class="req"><span class="${ok?'ok':'no'}">${ok?'✓':'✕'}</span><span>${txt}</span></div>`;
-        up=`<div class="sec"><h4>Aufstieg zu ${NX.n}</h4>${r(full,`Haus voll belegt (${T.max} ${T.n})`)}${r(happy,'Zufriedenheit mindestens 90 %')}${NX.svc.filter(sv=>!T.svc.includes(sv)).map(sv=>r(covOf(sv)[i],SVC_N[sv])).join('')}${r(mat,'Material: '+Object.entries(T.up).map(([g,n])=>`${n} ${GOODS[g].n}`).join(', '))}
+        up=`<div class="sec"><h4>Aufstieg zu ${NX.n}</h4>${r(full,`Haus voll belegt (${T.max} ${T.n})`)}${r(happy,'Grundbedarf zu mindestens 90 % gedeckt')}${T.lux.length?r((b.lux??1)>=.6,'Luxusgüter zu mindestens 60 % gedeckt'):''}${NX.svc.filter(sv=>!T.svc.includes(sv)).map(sv=>r(covOf(sv)[i],SVC_N[sv])).join('')}${r(mat,'Material: '+Object.entries(T.up).map(([g,n])=>`${n} ${GOODS[g].n}`).join(', '))}
           <label class="check"><input type="checkbox" id="allowUp" ${G.allowUp?'checked':''}> Aufstieg für alle Häuser erlauben</label></div>`;
       } else up=`<div class="sec"><p class="note">Aristokraten sind die höchste Stufe. Jeder zahlt ${T.tax} Gold Steuern pro Minute.</p></div>`;
       html=head(T.house,`${Math.floor(b.res)} von ${T.max} ${T.n}`)+
         `<div class="sec"><div class="row"><span class="l">Zufriedenheit</span><span class="v">${pct(b.happy)}</span></div><div class="bar ${barCls(b.happy)}"><i style="width:${b.happy*100}%"></i></div></div>
-        <div class="sec"><h4>Bedürfnisse</h4>${needs}</div>${up}
+        ${(b.downT||0)>20?`<p class="note" style="color:var(--bad)">Der Grundbedarf ist seit Längerem nicht gedeckt. Bleibt es so, steigt das Haus eine Stufe ab.</p>`:''}
+        <div class="sec"><h4>Bedürfnisse</h4>${needs}<p class="note">Grundbedarf und Dienste bestimmen die Zufriedenheit. Luxusgüter bringen bis zu 25 % mehr Steuern und sind für den Aufstieg nötig.</p></div>
+        <div class="sec"><h4>Steuern für alle ${T.n}</h4><div class="btns" style="gap:4px">${TAXN.map((nm,lv)=>`<button type="button" class="btn ${G.taxLv[b.tier]===lv?'primary':''}" data-act="tax:${b.tier}.${lv}">${nm}</button>`).join('')}</div><p class="note">Niedrig: 30 % weniger Steuern, zufriedener. Hoch: 40 % mehr Steuern, unzufriedener.</p></div>${up}
         <div class="sec"><div class="btns"><button class="btn danger" data-act="demolish" type="button">${confirm?'Wirklich abreißen?':'Abreißen'}</button></div></div>`;
     } else if (d.out){
       const extra = b.t==='fischer' ? Math.round(fishLevel(b)*20) : (b.t==='erzmine'||b.t==='goldmine') ? Math.floor(reserveOf(b)/5) : 0;
@@ -3096,12 +3232,20 @@ function renderPanel(force){
         ${!b.conn?'<p class="note">Baue eine Straße von diesem Betrieb bis zu einem Kontor oder Markthaus.</p>':''}</div>
         <div class="sec"><div class="btns"><button class="btn" data-act="toggle" type="button">${b.on?'Anhalten':'Fortsetzen'}</button><button class="btn danger" data-act="demolish" type="button">${confirm?'Wirklich abreißen?':'Abreißen'}</button></div></div>`;
     } else if (b.t==='werft'){
-      const miss=missing(SHIP_COST,b.isl);
-      sig=[b.id,confirm,b.shipT==null,G.ships.length,!!miss,b.fire>0].join('|');
+      const types=Object.keys(SHIPTYPES).filter(k=>!SHIPTYPES[k].unlock || atLeast(SHIPTYPES[k].unlock.t[0])>=SHIPTYPES[k].unlock.t[1]);
+      sig=[b.id,confirm,b.shipT==null,b.shipType,G.ships.length,types.map(k=>!!missing(SHIPTYPES[k].cost,b.isl)).join(),b.fire>0].join('|');
+      const cur=SHIPTYPES[b.shipType]||SHIPTYPES.kogge;
       html=head(d.n,`Insel ${islName(b.isl)} · Unterhalt ${d.up} Gold/min`)+
-        (b.shipT==null ? `<div class="sec"><p class="note">Ein Handelsschiff fasst 160 Waren und kann Routen zwischen deinen Inseln fahren. Das Material kommt aus dem Lager dieser Insel.</p><div class="row"><span class="l">Kosten</span>${costHTML(SHIP_COST,b.isl)}</div><div class="btns"><button class="btn primary" type="button" data-act="buildship" ${miss||G.ships.length>=MAX_SHIPS?'disabled':''}>Handelsschiff bauen</button></div></div>`
-          : `<div class="sec"><div class="row"><span class="l">Schiffsbau</span><span class="v" data-v="ship"></span></div><div class="bar"><i data-bar="ship"></i></div></div>`)+
+        (b.shipT==null ? `<div class="sec"><p class="note">Das Material kommt aus dem Lager dieser Insel.</p>${types.map(k=>{ const T=SHIPTYPES[k], miss=missing(T.cost,b.isl);
+            return `<div class="sec" style="border:0;padding-top:4px;margin-top:4px"><div class="row"><span class="l"><b>${T.n}</b></span><span class="v">${T.cap} Waren · ${T.speed>3.5?'schnell':T.speed<3?'langsam':'mittel'}</span></div><p class="note">${T.d} Bauzeit ${T.time} s.</p><div class="row">${costHTML(T.cost,b.isl)}<button class="btn ${miss?'':'primary'}" type="button" data-act="buildship:${k}" ${miss||G.ships.length>=MAX_SHIPS?'disabled':''}>Bauen</button></div></div>`; }).join('')}</div>`
+          : `<div class="sec"><div class="row"><span class="l">Baut eine ${cur.n}</span><span class="v" data-v="ship"></span></div><div class="bar"><i data-bar="ship"></i></div></div>`)+
         `<div class="sec"><div class="row"><span class="l">Deine Schiffe</span><span class="v">${G.ships.length} von höchstens ${MAX_SHIPS}</span></div><div class="btns"><button class="btn danger" data-act="demolish" type="button">${confirm?'Wirklich abreißen?':'Abreißen'}</button></div></div>`;
+    } else if (b.t==='universitaet'){
+      sig=[b.id,confirm,Math.floor(G.rp),[...G.techs].join(),b.fire>0].join('|');
+      html=head(d.n,`Wissen: ${Math.floor(G.rp)} · +10 pro Minute je Universität`)+
+        `<div class="sec"><h4>Technologien</h4>${TECHS.map(T=>{ const has=G.techs.has(T.k);
+          return `<div class="row" style="align-items:flex-start"><span class="l" style="display:block"><b>${T.n}</b><br><span class="note">${T.d}</span></span>${has?'<span class="pill ok">erforscht</span>':`<button class="btn ${G.rp>=T.c?'primary':''}" type="button" data-act="tech:${T.k}" ${G.rp<T.c?'disabled':''}>${T.c} Wissen</button>`}</div>`; }).join('')}</div>
+        <div class="sec"><div class="btns"><button class="btn danger" data-act="demolish" type="button">${confirm?'Wirklich abreißen?':'Abreißen'}</button></div></div>`;
     } else {
       const isle=G.map.comps[b.isl];
       sig=[b.id,confirm,capOf(b.isl),isle.id,cnt(b.t),b.st].join('|');
@@ -3117,19 +3261,23 @@ function renderPanel(force){
     let near=null, nd=1e9;
     for (const c of G.map.comps){ const d=Math.hypot(c.cx-s.x,c.cy-s.y)-Math.sqrt(c.tiles.length)*.56; if (d<nd){ nd=d; near=c; } }
     const nearIsle = nd<=8 ? near : null, dk=dockedAt(s), KG=knownGoods(), tot=cargoTotal(s), r=s.route, ks=G.buildings.filter(b=>b.t==='kontor'&&!(b.build<1));
-    sig=['ship',s.id,nearIsle&&nearIsle.id,G.founded,s.moving,dk&&dk.id,GK.map(g=>s.cargo[g]).join(),dk?KG.map(g=>Math.floor(G.stores[dk.isl]?.[g]||0)).join():'',JSON.stringify(r),s.rst,ks.length].join('|');
+    sig=['ship',s.id,nearIsle&&nearIsle.id,G.founded,s.moving,dk&&dk.id,GK.map(g=>s.cargo[g]).join(),dk?KG.map(g=>Math.floor(G.stores[dk.isl]?.[g]||0)).join():'',JSON.stringify(r),s.rst,ks.length,routePick].join('|');
     const cargo = GK.filter(g=>s.cargo[g]>0).map(g=>`<span class="pill">${icon(g,14)} ${s.cargo[g]}</span>`).join(' ') || '<span class="note">leer</span>';
-    let body = `<div class="sec"><div class="row"><span class="l">Laderaum</span><span class="v">${tot} / ${s.cap}</span></div><div class="bar"><i style="width:${tot/s.cap*100}%"></i></div><div class="btns" style="gap:4px">${cargo}</div></div>`;
+    let body = `<div class="sec"><div class="row"><span class="l">${(SHIPTYPES[s.type]||SHIPTYPES.kogge).n} · Laderaum</span><span class="v">${tot} / ${shipCap(s)}</span></div><div class="bar"><i style="width:${tot/shipCap(s)*100}%"></i></div><div class="btns" style="gap:4px">${cargo}</div></div>`;
     if (dk && G.stores[dk.isl]){ const st=G.stores[dk.isl];
-      body += `<div class="sec"><h4>Am Kontor auf ${islName(dk.isl)}</h4><table class="tt"><thead><tr><th>Ware</th><th class="n">Lager</th><th class="n">Schiff</th><th class="n">Laden</th></tr></thead><tbody>${KG.map(g=>`<tr><td><span class="gname">${icon(g)}${GOODS[g].n}</span></td><td class="n">${Math.floor(st[g])}</td><td class="n">${s.cargo[g]}</td><td class="n"><button type="button" data-act="load:${g}" ${st[g]<1||tot>=s.cap?'disabled':''}>+10</button> <button type="button" data-act="unload:${g}" ${s.cargo[g]<1?'disabled':''}>−10</button></td></tr>`).join('')}</tbody></table><div class="btns"><button class="btn" data-act="unloadall" type="button" ${tot?'':'disabled'}>Alles entladen</button></div></div>`; }
+      body += `<div class="sec"><h4>Am Kontor auf ${islName(dk.isl)}</h4><table class="tt"><thead><tr><th>Ware</th><th class="n">Lager</th><th class="n">Schiff</th><th class="n">Laden</th></tr></thead><tbody>${KG.map(g=>`<tr><td><span class="gname">${icon(g)}${GOODS[g].n}</span></td><td class="n">${Math.floor(st[g])}</td><td class="n">${s.cargo[g]}</td><td class="n"><button type="button" data-act="load:${g}" ${st[g]<1||tot>=shipCap(s)?'disabled':''}>+10</button> <button type="button" data-act="unload:${g}" ${s.cargo[g]<1?'disabled':''}>−10</button></td></tr>`).join('')}</tbody></table><div class="btns"><button class="btn" data-act="unloadall" type="button" ${tot?'':'disabled'}>Alles entladen</button></div></div>`; }
     if (ks.length>=2){
-      const rr=r||{ a:ks[0].isl, b:ks[1].isl, goods:{}, on:false, leg:0 };
-      const gl=KG.map(g=>{ const v=rr.goods[g]||0; return `<button type="button" class="pill ${v?'ok':''}" data-act="rg:${g}">${icon(g,14)} ${v===1?'nach '+islName(rr.b):v===-1?'nach '+islName(rr.a):'–'}</button>`; }).join(' ');
-      body += `<div class="sec"><h4>Handelsroute</h4>
-        <div class="row"><span class="l">Hafen A</span><button class="btn" type="button" data-act="ra">${islName(rr.a)}</button></div>
-        <div class="row"><span class="l">Hafen B</span><button class="btn" type="button" data-act="rb">${islName(rr.b)}</button></div>
-        <p class="note">Tippe eine Ware an, um festzulegen, wohin das Schiff sie bringt. Es lädt so viel, wie im Lager liegt, und teilt den Laderaum auf.</p><div class="btns" style="gap:4px">${gl}</div>
-        <div class="btns"><button class="btn ${rr.on?'':'primary'}" type="button" data-act="${rr.on?'routeoff':'routeon'}">${rr.on?'Route anhalten':'Route starten'}</button></div>${rr.on&&s.rst?`<p class="note">${s.rst}</p>`:''}</div>`;
+      const rr=normRoute(r)||{ stops:[{isl:ks[0].isl,act:{}},{isl:ks[1].isl,act:{}}], on:false, idx:0 };
+      const stops=rr.stops.map((st,i)=>{
+        const rows=Object.keys(st.act).map(g=>{ const a=st.act[g];
+          const lab = a.m==='load' ? (a.n?`Rest ${a.n} lassen`:'alles laden') : (a.n?`bis ${a.n} auffüllen`:'alles entladen');
+          return `<div class="row"><span class="l">${icon(g,14)} ${GOODS[g].n}</span><span class="btns" style="gap:4px"><button type="button" class="pill ${a.m==='load'?'ok':'warn'}" data-act="rm:${i}.${g}">${a.m==='load'?'laden':'entladen'}</button><button type="button" class="pill" data-act="rn:${i}.${g}">${lab}</button></span></div>`; }).join('');
+        const add = routePick===i ? KG.filter(g=>!st.act[g]).map(g=>`<button type="button" class="pill" data-act="radd:${i}.${g}">${icon(g,14)} ${GOODS[g].n}</button>`).join(' ') : '';
+        return `<div style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:grid;gap:6px${rr.on&&rr.idx===i?';border-color:var(--brass)':''}">
+          <div class="row"><span class="l"><b>Halt ${i+1}</b></span><span class="btns" style="gap:4px"><button class="btn" type="button" data-act="rs:${i}">${islName(st.isl)}</button>${rr.stops.length>2?`<button class="x" type="button" data-act="rdel:${i}" aria-label="Halt entfernen">✕</button>`:''}</span></div>
+          ${rows||'<p class="note">Noch keine Ware festgelegt.</p>'}<div class="btns" style="gap:4px"><button type="button" class="pill ${routePick===i?'ok':''}" data-act="rpick:${i}">${routePick===i?'Auswahl schließen':'+ Ware'}</button>${add}</div></div>`; }).join('');
+      body += `<div class="sec"><h4>Handelsroute</h4><p class="note">An jedem Halt entlädt das Schiff zuerst und lädt dann. „laden“ und „entladen“ antippen wechselt die Aktion, das zweite Feld legt Mengen fest.</p>${stops}
+        <div class="btns">${rr.stops.length<4?'<button class="btn" type="button" data-act="rstop">+ Halt</button>':''}<button class="btn ${rr.on?'':'primary'}" type="button" data-act="${rr.on?'routeoff':'routeon'}">${rr.on?'Route anhalten':'Route starten'}</button></div>${rr.on&&s.rst?`<p class="note">${s.rst}</p>`:''}</div>`;
     } else if (G.founded) body += `<div class="sec"><p class="note">Mit einem zweiten Kontor kannst du hier eine Handelsroute zwischen zwei Inseln einrichten.</p></div>`;
     html=head(s.name, s.moving?(r&&r.on?(s.rst||'Fährt Route'):'Segelt …'):(dk?`Liegt am Kontor auf ${islName(dk.isl)}`:(innerWidth<=760?'Tippe aufs Wasser, um zu segeln':'Liegt vor Anker')))+
       `<div class="sec m-hide"><p class="note">Tippe oder klicke aufs Wasser, um zu segeln. Jede Insel hat ihr eigenes Lager. Am eigenen Kontor kannst du Waren laden und entladen.</p></div>`+body+
@@ -3172,25 +3320,33 @@ function shipThumb(cnv,kind){
   c.translate(28,30); c.scale(.62,.62);
   drawShip(c,{x:0,y:0,da:.6,moving:false},kind==='trade'?'trader':'player',0);
 }
+let routePick=-1;
 function shipAct(k,v){
   const s=selShip(); if (!s) return;
   const ks=G.buildings.filter(b=>b.t==='kontor'&&!(b.build<1)).map(b=>b.isl), dk=dockedAt(s);
-  const rt=()=>s.route||(s.route={ a:ks[0], b:ks[1], goods:{}, on:false, leg:0 });
-  const next=(cur,skip)=>{ const o=ks.filter(i=>i!==skip); return o[(o.indexOf(cur)+1)%o.length]; };
+  const rt=()=>normRoute(s.route)||(s.route={ stops:[{isl:ks[0],act:{}},{isl:ks[1],act:{}}], on:false, idx:0 });
+  const [si,g]=(v||'').split('.'), i=+si;
   if (k==='load' && dk) transfer(s,dk.isl,v,10);
   else if (k==='unload' && dk) transfer(s,dk.isl,v,-10);
-  else if (k==='unloadall' && dk){ for (const g of GK){ if (s.cargo[g]) transfer(s,dk.isl,g,-s.cargo[g]); } }
-  else if (k==='ra'){ const r=rt(); r.a=next(r.a,r.b); r.on=false; }
-  else if (k==='rb'){ const r=rt(); r.b=next(r.b,r.a); r.on=false; }
-  else if (k==='rg'){ const r=rt(), c=r.goods[v]||0; r.goods[v] = c===0?1 : c===1?-1 : 0; }
-  else if (k==='routeon'){ const r=rt(); if (!Object.values(r.goods).some(x=>x)){ toast('Lege mindestens eine Ware fest, die das Schiff transportieren soll.','warn'); return; } if (r.a===r.b){ toast('Wähle zwei verschiedene Häfen.','warn'); return; } r.on=true; r.leg=0; s.path=[]; s.rwait=0; toast(`${s.name} fährt jetzt zwischen ${islName(r.a)} und ${islName(r.b)}.`,'good'); }
+  else if (k==='unloadall' && dk){ for (const gg of GK){ if (s.cargo[gg]) transfer(s,dk.isl,gg,-s.cargo[gg]); } }
+  else if (k==='rs'){ const r=rt(), st=r.stops[i]; st.isl=ks[(ks.indexOf(st.isl)+1)%ks.length]; r.on=false; }
+  else if (k==='rdel'){ const r=rt(); if (r.stops.length>2){ r.stops.splice(i,1); r.idx=0; r.on=false; } }
+  else if (k==='rstop'){ const r=rt(); if (r.stops.length<4){ const last=r.stops[r.stops.length-1].isl; r.stops.push({ isl:ks.find(x=>x!==last)??ks[0], act:{} }); } }
+  else if (k==='radd'){ const r=rt(); r.stops[i].act[g]={ m:'load', n:0 }; }
+  else if (k==='rpick'){ routePick = routePick===i ? -1 : i; }
+  else if (k==='rm'){ const r=rt(), a=r.stops[i].act[g]; if (a){ if (a.m==='load'){ a.m='unload'; a.n=0; } else delete r.stops[i].act[g]; } }
+  else if (k==='rn'){ const r=rt(), a=r.stops[i].act[g]; if (a){ const seq = a.m==='load' ? [0,10,20,30,50,100] : [0,20,40,60,100,150]; a.n=seq[(seq.indexOf(a.n)+1)%seq.length]; } }
+  else if (k==='routeon'){ const r=rt();
+    if (!r.stops.some(st=>Object.keys(st.act).length)){ toast('Lege an mindestens einem Halt eine Ware fest.','warn'); return; }
+    if (new Set(r.stops.map(st=>st.isl)).size<2){ toast('Die Route braucht mindestens zwei verschiedene Häfen.','warn'); return; }
+    r.on=true; r.idx=0; s.path=[]; s.rwait=0; toast(`${s.name} fährt jetzt ihre Route über ${r.stops.map(st=>islName(st.isl)).join(', ')}.`,'good'); }
   else if (k==='routeoff' && s.route){ s.route.on=false; s.rst=''; }
   renderPanel(true); updateTop();
 }
 function updatePanelLive(){
   if (panel.hidden) return;
   if (sel.kind==='b'){ const b=G.byId.get(sel.id); if (!b) return; const d=B[b.t];
-    if (b.t==='werft' && b.shipT!=null){ const sb=panel.querySelector('[data-bar="ship"]'); if (sb) sb.style.width=(b.shipT/SHIP_TIME*100)+'%'; const sv=panel.querySelector('[data-v="ship"]'); if (sv) sv.textContent=Math.round(b.shipT/SHIP_TIME*100)+' %'; }
+    if (b.t==='werft' && b.shipT!=null){ const sb=panel.querySelector('[data-bar="ship"]'); if (sb) sb.style.width=(b.shipT/shipTime(b)*100)+'%'; const sv=panel.querySelector('[data-v="ship"]'); if (sv) sv.textContent=Math.round(b.shipT/shipTime(b)*100)+' %'; }
     if (b.build<1){ const bb=panel.querySelector('[data-bar="build"]'); if (bb) bb.style.width=(b.build*100)+'%'; const bv=panel.querySelector('[data-v="build"]'); if (bv) bv.textContent=Math.round(b.build*100)+' %'; return; }
     if (d.out){ const pg=panel.querySelector('[data-bar="prog"]'); if (pg) pg.style.width=(b.prog/d.time*100)+'%'; const pv=panel.querySelector('[data-v="prog"]'); if (pv) pv.textContent=Math.round(b.prog/d.time*100)+' %';
       const eb=panel.querySelector('[data-bar="eff"]'); if (eb) eb.style.width=(b.eff*100)+'%'; const ev=panel.querySelector('[data-v="eff"]'); if (ev) ev.textContent=pct(b.eff); } }
@@ -3247,7 +3403,7 @@ function showMenu(mode){
     <dt>Ziehen / rechte Taste</dt><dd>Karte verschieben. Auf dem Handy mit einem Finger, Zoom mit zwei.</dd>
     <dt>Mausrad, + / −</dt><dd>Zoomen</dd><dt>Leertaste, 1 · 2 · 3</dt><dd>Pause und Spieltempo</dd><dt>R · X · Esc</dt><dd>Straße · Abriss · Abbrechen</dd></dl>
     <div class="chain"><div>${icon('wolle')} Schaffarm → ${icon('stoff')} Weberei → ${icon('kleidung')} Schneiderei</div><div>${icon('getreide')} Getreidefarm → ${icon('mehl')} Mühle → ${icon('brot')} Bäckerei</div><div>${icon('hopfen')} Hopfengarten + ${icon('getreide')} Getreide → ${icon('bier')} Brauerei</div><div>${icon('holz')} Holz → ${icon('kohle')} Köhlerei · ${icon('erz')} Erz + Kohle → ${icon('eisen')} Erzschmelze → ${icon('werkzeug')} Werkzeugschmiede</div><div>${icon('ton')} Tongrube → ${icon('ziegel')} Ziegelei</div><div>${icon('rind')} Rinderfarm → ${icon('fleisch')} Metzgerei</div><div>${icon('trauben')} Weinberg → ${icon('wein')} Weinkelterei</div><div>${icon('golderz')} Goldmine → ${icon('schmuck')} Goldschmied</div></div>
-    <p class="note" style="margin-top:10px">Fünf Stufen: Pioniere wollen Fisch und einen Markt. Mit Kapelle werden sie Siedler (plus Stoff), mit Schule Bürger (plus Brot, Tee, Bier), mit Wirtshaus Kaufleute (plus Fleisch, Kleidung, Wein) und mit Theater Aristokraten (plus Schmuck). Für jeden Aufstieg brauchen die Häuser Baumaterial: Holz, Werkzeug, Stein, Ziegel und Eisen.</p><p class="note" style="margin-top:8px">Jede Insel hat ihr eigenes Lager. Waren bringst du mit Schiffen zwischen deinen Inseln hin und her, von Hand am Kontor oder über Handelsrouten. Wälder, Erzadern und Fischgründe sind endlich. Feuerwehr und Arzt schützen vor Bränden und Seuchen.</p></details>`;
+    <p class="note" style="margin-top:10px">Fünf Stufen: Pioniere wollen Fisch und einen Markt. Mit Kapelle werden sie Siedler (plus Stoff), mit Schule Bürger (plus Brot, Tee, Bier), mit Wirtshaus Kaufleute (plus Fleisch, Kleidung, Wein) und mit Theater Aristokraten (plus Schmuck). Für jeden Aufstieg brauchen die Häuser Baumaterial: Holz, Werkzeug, Stein, Ziegel und Eisen.</p><p class="note" style="margin-top:8px">Jede Insel hat ihr eigenes Lager. Waren bringst du mit Schiffen zwischen deinen Inseln hin und her, von Hand am Kontor oder über Handelsrouten. Wälder, Erzadern und Fischgründe sind endlich. Feuerwehr und Arzt schützen vor Bränden und Seuchen. Fehlt der Grundbedarf zu lange, steigen Häuser wieder ab. Steuern stellst du pro Stufe im Hausfenster ein, Technologien erforschst du in der Universität.</p></details>`;
   if (mode==='win'){
     const mins=Math.round(G.t/60);
     card.innerHTML=`<p class="eyebrow">Ziel erreicht</p><h1>Hafenstadt</h1><p class="lede">Nach ${mins} Spielminuten leben ${fmt.format(G.pop)} Menschen in deiner Kolonie, davon ${fmt.format(G.popT[4]||0)} Aristokraten. Du kannst weiterbauen, so lange du willst.</p><div class="actions"><button class="btn primary" id="m-resume" type="button">Weiterspielen</button></div>`;
@@ -3295,8 +3451,9 @@ function serialize(){
   return { v:3, N, mv:G.map.ver||1, seed:G.seed, t:G.t, gold:G.gold, stores:G.stores, sup:G.sup, founded:G.founded, goal:G.goal, won:G.won, allowUp:G.allowUp,
     edits:[...G.treeEdits], saplings:[...G.saplings].map(([i,g])=>[i,+g.toFixed(2)]), ore, fish,
     roads:[...G.road.keys()].filter(i=>G.road[i]), tierSeen:G.tierSeen, unlocked:[...G.unlocked],
-    b:G.buildings.map(b=>[b.t,b.x,b.y,b.tier||0,+(b.res||0).toFixed(2),b.on?1:0,+b.prog.toFixed(2),b.out,b.hasIn?1:0,+(b.build??1).toFixed(3),+(b.fire||0).toFixed(1),+(b.sick||0).toFixed(1),b.shipT==null?null:+b.shipT.toFixed(1)]),
-    ships:G.ships.map(s=>({ id:s.id, name:s.name, x:s.x, y:s.y, a:s.da, cap:s.cap, cargo:s.cargo, route:s.route })),
+    b:G.buildings.map(b=>[b.t,b.x,b.y,b.tier||0,+(b.res||0).toFixed(2),b.on?1:0,+b.prog.toFixed(2),b.out,b.hasIn?1:0,+(b.build??1).toFixed(3),+(b.fire||0).toFixed(1),+(b.sick||0).toFixed(1),b.shipT==null?null:+b.shipT.toFixed(1),b.shipType||null]),
+    ships:G.ships.map(s=>({ id:s.id, name:s.name, x:s.x, y:s.y, a:s.da, cap:s.cap, type:s.type, cargo:s.cargo, route:s.route })),
+    techs:[...G.techs], rp:G.rp, taxLv:G.taxLv,
     events:G.events, nextEvent:G.nextEvent, trader:{tm:G.trader.st==='away'?G.trader.tm:120},
     cam:{x:cam.x,y:cam.y,z:cam.z} };
 }
@@ -3310,9 +3467,9 @@ function restore(s){
   for (const [i,v] of s.fish||[]) g.fish[i]=v;
   for (const i of s.roads||[]) g.road[i]=1;
   G=g;
-  for (const [t,x,y,tier,res,on,prog,out,hasIn,bld,fire,sick,shipT] of s.b){ const b={ build:bld==null?1:bld, id:g.nextId++, t, x, y, prog:prog||0, out:out||0, hasIn:!!hasIn, on:!!on, eff:.5, st:'', conn:false, seed:(x*7+y*13)%97, fire:fire||0, sick:sick||0, shipT:shipT==null?null:shipT }; if (t==='haus'){ b.tier=tier; b.res=res; b.happy=.7; b.upT=0; } addBuilding(b); }
+  for (const [t,x,y,tier,res,on,prog,out,hasIn,bld,fire,sick,shipT,shipType] of s.b){ const b={ shipType:shipType||'kogge', build:bld==null?1:bld, id:g.nextId++, t, x, y, prog:prog||0, out:out||0, hasIn:!!hasIn, on:!!on, eff:.5, st:'', conn:false, seed:(x*7+y*13)%97, fire:fire||0, sick:sick||0, shipT:shipT==null?null:shipT }; if (t==='haus'){ b.tier=tier; b.res=res; b.happy=.7; b.upT=0; } addBuilding(b); }
   if (s.ships){
-    g.ships=s.ships.map(o=>Object.assign(makeShip(o.id,o.name,o.x,o.y,o.cap),{ cargo:Object.assign(emptyGoods(),o.cargo), route:o.route||null, da:o.a||0, ang:o.a||0 }));
+    g.ships=s.ships.map(o=>Object.assign(makeShip(o.id,o.name,o.x,o.y,o.cap,o.type||'kogge'),{ cargo:Object.assign(emptyGoods(),o.cargo), route:o.route||null, da:o.a||0, ang:o.a||0 }));
     g.nextShip=Math.max(0,...g.ships.map(o=>o.id))+1;
   } else if (s.ship){ g.ships[0].x=s.ship.x; g.ships[0].y=s.ship.y; g.ships[0].da=g.ships[0].ang=s.ship.a||0; }
   if (s.stores){ for (const k in s.stores) g.stores[k]=Object.assign(emptyGoods(),s.stores[k]); g.sup=s.sup||{}; }
@@ -3324,6 +3481,7 @@ function restore(s){
     for (const b of g.buildings) if (b.t==='kontor'){ g.stores[b.isl]=g.stores[b.isl]||emptyGoods(); g.sup[b.isl]=Object.assign(fullSup(),s.sup||{}); }
   }
   for (const b of g.buildings) if (b.t==='kontor' && !g.stores[b.isl]) g.stores[b.isl]=emptyGoods();
+  g.techs=new Set(s.techs||[]); g.rp=s.rp||0; if (s.taxLv) g.taxLv=TIERS.map((_,i)=>s.taxLv[i]??1);
   g.events=s.events||[]; g.nextEvent=Math.max(s.nextEvent??600,600);
   g.trader.tm=s.trader?s.trader.tm:120;
   return g;
@@ -3344,7 +3502,7 @@ function frame(now){
     else {
       const gdt=rdt*G.speed;
       if (G.speed>0){ G.anim+=rdt; acc+=gdt; let n=0; while (acc>=STEP && n<40){ step(STEP); acc-=STEP; n++; } if (n>=40) acc=0; }
-      for (const s of G.ships) moveShip(s,gdt,3.2); updateWalkers(gdt); updateCarriers(gdt); updateDeer(gdt); updateCoaches(gdt); if (G.trader.st==='coming'||G.trader.st==='leaving') moveShip(G.trader,gdt,2.6);
+      for (const s of G.ships) moveShip(s,gdt,shipSpeed(s)); updateWalkers(gdt); updateCarriers(gdt); updateDeer(gdt); updateCoaches(gdt); if (G.trader.st==='coming'||G.trader.st==='leaving') moveShip(G.trader,gdt,2.6);
       const pan=520*rdt/cam.z;
       if (keys.has('arrowleft')||keys.has('a')) cam.x-=pan; if (keys.has('arrowright')||keys.has('d')) cam.x+=pan;
       if (keys.has('arrowup')||keys.has('w')) cam.y-=pan; if (keys.has('arrowdown')||keys.has('s')) cam.y+=pan;
