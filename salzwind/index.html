@@ -998,7 +998,13 @@ function demolishAt(x,y,quiet){
   if (!inB(x,y)) return false;
   const i=y*N+x;
   if (G.road[i]){ G.road[i]=0; G.dirty=true; return true; }
-  const id=G.occ[i]; if (!id) return false;
+  const id=G.occ[i];
+  if (!id && G.map.tree[i]){
+    if (!own[i]){ if (!quiet) toast('Bäume kannst du nur in deinem Baugebiet fällen.','warn'); return false; }
+    const st=G.stores[G.map.isl[i]];
+    if (st && matureTree(i) && st.holz<capOf(G.map.isl[i])) st.holz++;
+    cutTree(i); return true; }
+  if (!id) return false;
   const b=G.byId.get(id);
   if (b.t==='kontor' && cnt('kontor')<=1){ if (!quiet) toast('Dein letztes Kontor kannst du nicht abreißen.','warn'); return false; }
   const d=B[b.t], st=G.stores[b.isl];
@@ -3066,7 +3072,7 @@ function drawGhost(at){
   if (!tool || !hover || G.demo) return;
   if (paintTiles){
     for (const [x,y] of paintTiles){
-      if (tool==='abriss'){ const i=y*N+x; footprintFill(x,y,1,(G.road[i]||G.occ[i])?'rgba(229,122,98,.55)':'rgba(229,122,98,.15)'); continue; }
+      if (tool==='abriss'){ const i=y*N+x; footprintFill(x,y,1,(G.road[i]||G.occ[i]||(G.map.tree[i]&&own[i]))?'rgba(229,122,98,.55)':'rgba(229,122,98,.15)'); continue; }
       const ok=canPlace(tool,x,y).ok;
       footprintFill(x,y,1,ok?'rgba(134,201,143,.45)':'rgba(229,122,98,.35)');
       if (ok && tool==='haus'){ ctx.globalAlpha=.75; blit(bSprite('haus',0,0),isoX(x,y),isoY(x,y)+HH); ctx.globalAlpha=1; }
@@ -3278,7 +3284,7 @@ function costHTML(cost,isl=G.curIsle){
 function showHint(k){
   const el=$('#hint');
   if (!k || !G || G.demo){ el.hidden=true; return; }
-  if (k==='abriss'){ el.innerHTML='<b>Abreißen</b><p>Klicke auf ein Gebäude oder ziehe über Straßen und Wohnhäuser. Du erhältst die Hälfte der Baumaterialien zurück. Taste X.</p>'; el.hidden=false; return; }
+  if (k==='abriss'){ el.innerHTML='<b>Abreißen</b><p>Klicke auf ein Gebäude oder ziehe über Straßen, Wohnhäuser und Bäume. Gebäude geben die Hälfte der Baumaterialien zurück, ausgewachsene Bäume je 1 Holz. Bäume fällst du nur im eigenen Baugebiet. Taste X.</p>'; el.hidden=false; return; }
   const d=B[k]; const lock=!isUnlocked(k)?` · <span style="color:var(--warn)">${unlockText(d.unlock)}</span>`:'';
   const io = d.out ? `<p>${d.in?Object.entries(d.in).map(([g,n])=>`${n} ${GOODS[g].n}`).join(' + ')+' → ':''}${d.amt||1} ${GOODS[d.out].n} alle ${d.time} s · Unterhalt ${d.up} Gold/min</p>` : (d.up?`<p>Unterhalt ${d.up} Gold/min</p>`:'');
   el.innerHTML=`<b>${d.n}</b>${costHTML(costOf(k))}${lock}<p>${d.desc}</p>${io}`; el.hidden=false;
