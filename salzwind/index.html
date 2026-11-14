@@ -484,7 +484,7 @@ function bfsDist(L, landVal, out){
 }
 
 // ============================================================ map generation v2: larger sea, climate zones, varied island shapes
-const MAP_N = 128;
+const MAP_N = 160;
 const BIOMES = {
   gemaessigt:{ n:'Gemäßigt', warm:.5, code:0, tree:.5, conifer:.45 },
   nordisch:{ n:'Nordisch', warm:0, code:0, tree:.43, conifer:.85 },
@@ -599,9 +599,137 @@ function genMapV2(seed){
   }
   return { seed, ver:2, T, isl, ore, gold, tree, shade, dist, wd, comps, home:homeC.id };
 }
+// map generation v3: bigger islands, more shapes, mountains in varied places, rocky coasts, several lakes
+function genMapV3(seed){
+  const rnd = mulberry32(seed^0x3c71a9);
+  const L = new Uint8Array(N*N), own2 = new Int16Array(N*N).fill(-1);
+  const pickBiome=t=>{ const r=rnd();
+    if (t<.32) return r<.6?'nordisch':r<.8?'gemaessigt':r<.9?'vulkan':'heide';
+    if (t>.68) return r<.6?'tropisch':r<.8?'vulkan':r<.9?'heide':'gemaessigt';
+    return r<.45?'gemaessigt':r<.65?'heide':r<.8?'tropisch':r<.9?'nordisch':'vulkan'; };
+  const mk=(x,y,r,type,biome)=>{
+    const c={ x, y, r, type, biome, ang:rnd()*Math.PI*2, ax:1.3+rnd()*.6, amp:type==='jagged'?1.15:.5+rnd()*.4, lakes:[], subs:null, spokes:null };
+    if (type==='cluster'){ c.subs=[]; const n=3+Math.floor(rnd()*3); for (let k=0;k<n;k++){ const a=rnd()*6.28, d=rnd()*r*.7; c.subs.push({ x:x+Math.cos(a)*d, y:y+Math.sin(a)*d, r:r*(.32+rnd()*.25) }); } }
+    if (type==='peninsula'){ c.spokes=[]; const n=3+Math.floor(rnd()*2), a0=rnd()*6.28; for (let k=0;k<n;k++) c.spokes.push({ a:a0+k*6.28/n+(rnd()-.5)*.7, len:.75+rnd()*.45, w:.2+rnd()*.1 }); }
+    if (type!=='atoll' && type!=='cluster' && r>=9){
+      const nl = r>=17 ? 1+Math.floor(rnd()*3) : rnd()<.45 ? 1 : 0;
+      for (let k=0;k<nl;k++){ const a=rnd()*6.28, d=r*(.1+rnd()*.4); c.lakes.push({ x:x+Math.cos(a)*d, y:y+Math.sin(a)*d, r:1.3+rnd()*(r>=17?2.4:1.4) }); } }
+    return c; };
+  const home=mk(N*.5+(rnd()-.5)*12, N*.5+(rnd()-.5)*12, 19, rnd()<.5?'round':'ellipse', 'gemaessigt'); home.lakes=home.lakes.slice(0,1); home.amp=.75; home.ax=Math.min(home.ax,1.45);
+  const C=[home], want=Math.round(22*(N*N)/(160*160));
+  const TYPES=['round','ellipse','ellipse','crescent','atoll','cluster','jagged','jagged','peninsula','peninsula','horseshoe','twin','twin'];
+  const reachOf=c=>c.r*(c.type==='ellipse'?1.6:c.type==='peninsula'?1.25:c.type==='twin'?1.15:1.05);
+  for (let k=0;k<6000 && C.length<want;k++){
+    const big=rnd()<.28, r=big?17+rnd()*7:7.5+rnd()*8, x=5+r+rnd()*(N-10-2*r), y=5+r+rnd()*(N-10-2*r);
+    let type=TYPES[Math.floor(rnd()*TYPES.length)]; if ((type==='atoll'||type==='horseshoe')&&r<9) type='round'; if (type==='cluster'&&r<10) type='jagged';
+    const c=mk(x,y,r,type,pickBiome((x+y)/(2*N)));
+    if (!C.every(o=>Math.hypot(o.x-x,o.y-y) > reachOf(o)+reachOf(c)+4)) continue;
+    C.push(c);
+  }
+  const segV=(px,py,ax,ay,bx,by,w)=>{ const vx=bx-ax, vy=by-ay, l2=vx*vx+vy*vy||1; const t=Math.max(0,Math.min(1,((px-ax)*vx+(py-ay)*vy)/l2)); return 1-Math.hypot(px-ax-vx*t,py-ay-vy*t)/w-t*.35; };
+  const val=(c,x,y)=>{ const dx=x-c.x, dy=y-c.y, ca=Math.cos(c.ang), sa=Math.sin(c.ang), lx=dx*ca+dy*sa, ly=-dx*sa+dy*ca;
+    switch (c.type){
+      case 'ellipse': return 1-Math.hypot(lx/(c.r*c.ax), ly/(c.r/c.ax*1.15));
+      case 'crescent': return Math.min(1-Math.hypot(lx,ly)/c.r, (Math.hypot(lx-c.r*.55,ly)/(c.r*.7)-1)*1.4);
+      case 'atoll': return .34-Math.abs(Math.hypot(lx,ly)/c.r-.72)*1.25;
+      case 'horseshoe': { const d=Math.hypot(lx,ly)/c.r, a=Math.abs(Math.atan2(ly,lx)); return .45-Math.abs(d-.6)*1.1-(a<.85?.6*(1-a/.85):0); }
+      case 'twin': { const o=c.r*.48; return Math.max(1-Math.hypot(lx-o,ly)/(c.r*.62), 1-Math.hypot(lx+o,ly)/(c.r*.55), 1-Math.abs(ly)/(c.r*.16)-Math.max(0,Math.abs(lx)-o)/(c.r*.3)); }
+      case 'peninsula': { let v=1-Math.hypot(dx,dy)/(c.r*.62); for (const s of c.spokes) v=Math.max(v,segV(dx,dy,0,0,Math.cos(s.a)*c.r*s.len,Math.sin(s.a)*c.r*s.len,c.r*s.w)); return v; }
+      case 'cluster': { let v=-1; for (const s of c.subs) v=Math.max(v,1-Math.hypot(x-s.x,y-s.y)/s.r); return v; }
+      default: return 1-Math.hypot(dx,dy)/c.r;
+    } };
+  for (let y=0;y<N;y++) for (let x=0;x<N;x++){
+    const n=fbm(x*.12,y*.12,seed)-.5, n2=fbm(x*.28,y*.28,seed+77)-.5;
+    let best=-9, bi=-1;
+    for (let k=0;k<C.length;k++){ const c=C[k], rr=reachOf(c)*1.6+3; if (Math.abs(x-c.x)>rr||Math.abs(y-c.y)>rr) continue;
+      const v=val(c,x,y)+n*c.amp*.7+(c.type==='jagged'?n2*.55:n2*.12); if (v>best){ best=v; bi=k; } }
+    if (best>.12 && x>2 && y>2 && x<N-3 && y<N-3){
+      const c=C[bi]; if (c.lakes.some(l=>Math.hypot(x-l.x,y-l.y)<l.r+n*1.4)) continue;
+      L[y*N+x]=1; own2[y*N+x]=bi; }
+  }
+  const isl=new Int16Array(N*N).fill(-1), seen=new Uint8Array(N*N), comps=[];
+  for (let i=0;i<N*N;i++){
+    if (!L[i]||seen[i]) continue;
+    const tiles=[], st=[i]; seen[i]=1;
+    while (st.length){ const j=st.pop(); tiles.push(j); const x=j%N, y=(j/N)|0;
+      for (const [dx,dy] of D4){ const nx=x+dx, ny=y+dy; if (nx<0||ny<0||nx>=N||ny>=N) continue; const q=ny*N+nx; if (L[q]&&!seen[q]){ seen[q]=1; st.push(q); } } }
+    if (tiles.length<20){ for (const j of tiles) L[j]=0; continue; }
+    const id=comps.length, votes={}; let sx=0, sy=0;
+    for (const j of tiles){ isl[j]=id; sx+=j%N; sy+=(j/N)|0; const b=C[own2[j]].biome; votes[b]=(votes[b]||0)+1; }
+    const biome=Object.keys(votes).sort((a,b)=>votes[b]-votes[a])[0];
+    comps.push({ id, tiles, cx:sx/tiles.length+.5, cy:sy/tiles.length+.5, biome, shape:C[own2[tiles[0]]].type });
+  }
+  const dist=new Uint8Array(N*N), wd=new Uint8Array(N*N);
+  bfsDist(L,1,dist); bfsDist(L,0,wd);
+  const hi=Math.round(home.y)*N+Math.round(home.x);
+  let homeC = isl[hi]>=0 ? comps[isl[hi]] : comps.slice().sort((a,b)=>Math.hypot(a.cx-home.x,a.cy-home.y)-Math.hypot(b.cx-home.x,b.cy-home.y))[0];
+  homeC.biome='gemaessigt';
+  const pools={}; for (const k in BIOME_NAMES) pools[k]=BIOME_NAMES[k].slice().sort(()=>rnd()-.5);
+  const used=new Set();
+  for (const c of comps){ let nm=pools[c.biome].shift() || pools.gemaessigt.shift(); if (!nm) nm='Insel '+(c.id+1); if (used.has(nm)) nm+=' II'; used.add(nm); c.name=nm;
+    c.home=c===homeC; c.tee=c.wein=c.ore=c.gold=false; c.mount=false;
+    c.treeAdj=(rnd()-.5)*.18; c.rocky = c.biome==='nordisch' ? .4+rnd()*.1 : c.biome==='vulkan' ? .45+rnd()*.1 : .52+rnd()*.2; }
+  const others=comps.filter(c=>c!==homeC);
+  for (const c of others){ const B=c.biome;
+    c.tee = B==='tropisch' ? rnd()<.85 : B==='gemaessigt' ? rnd()<.2 : B==='vulkan' ? rnd()<.4 : false;
+    c.wein = (B==='gemaessigt'||B==='heide') ? rnd()<.55 : B==='vulkan' ? rnd()<.35 : false;
+    c.ore = B==='nordisch' ? rnd()<.75 : B==='vulkan' ? rnd()<.7 : rnd()<.25;
+    c.mount = c.ore || B==='nordisch' || B==='vulkan' || (c.tiles.length>80 && rnd()<.55); }
+  homeC.mount=true; homeC.treeAdj=Math.min(homeC.treeAdj,0);
+  const ensure=(key,pref)=>{ if (others.some(c=>c[key])) return; const c=others.find(o=>pref.includes(o.biome))||others[0]; if (c){ c[key]=true; if (key==='ore') c.mount=true; } };
+  ensure('tee',['tropisch','vulkan']); ensure('wein',['gemaessigt','heide']); ensure('ore',['nordisch','vulkan']);
+  const T=new Uint8Array(N*N), ore=new Uint8Array(N*N), gold=new Uint8Array(N*N), tree=new Uint8Array(N*N), shade=new Uint8Array(N*N);
+  const xy=j=>[j%N,(j/N)|0];
+  for (const c of comps){
+    if (!c.mount) continue;
+    const inner=c.tiles.filter(j=>dist[j]>=2);
+    if (inner.length<3){ c.mount=false; c.ore=false; continue; }
+    const frac = c.biome==='vulkan'?.16 : c.biome==='nordisch'?.11 : .06+rnd()*.04;
+    const wantM=Math.max(3,Math.round(c.tiles.length*frac)), m=new Set();
+    // where the mountains go: a ridge across the island, one coast, two massifs, scattered hills, or the centre
+    const r0=rnd(), style = c.biome==='vulkan' ? (r0<.55?'center':'edge') : r0<.32?'ridge' : r0<.58?'edge' : r0<.76?'twin' : r0<.9?'scatter' : 'center';
+    const a=rnd()*Math.PI*2, ca=Math.cos(a), sa=Math.sin(a), proj=j=>{ const [x,y]=xy(j); return (x-c.cx)*ca+(y-c.cy)*sa; }, perp=j=>{ const [x,y]=xy(j); return -(x-c.cx)*sa+(y-c.cy)*ca; };
+    let seeds;
+    if (style==='center') seeds=[inner.slice().sort((p,q)=>dist[q]-dist[p])[0]];
+    else if (style==='edge'){ const sorted=inner.slice().sort((p,q)=>proj(q)-proj(p)); seeds=[sorted[Math.floor(rnd()*Math.min(4,sorted.length))]]; }
+    else if (style==='twin'){ const sorted=inner.slice().sort((p,q)=>proj(q)-proj(p)); seeds=[sorted[Math.floor(sorted.length*.12)], sorted[Math.floor(sorted.length*.88)]]; }
+    else if (style==='scatter'){ seeds=[]; for (let k=0;k<12 && seeds.length<3+Math.floor(rnd()*2);k++){ const j=inner[Math.floor(rnd()*inner.length)]; if (seeds.every(s=>Math.hypot(xy(s)[0]-xy(j)[0],xy(s)[1]-xy(j)[1])>4)) seeds.push(j); } }
+    if (style==='ridge'){
+      inner.slice().sort((p,q)=>Math.abs(perp(p))+hash2(p,7,seed)*1.6-Math.abs(perp(q))-hash2(q,7,seed)*1.6).slice(0,wantM).forEach(j=>m.add(j));
+    } else if (c.biome==='vulkan'){
+      const [sx,sy]=xy(seeds[0]); inner.slice().sort((p,q)=>Math.hypot(xy(p)[0]-sx,xy(p)[1]-sy)-Math.hypot(xy(q)[0]-sx,xy(q)[1]-sy)).slice(0,wantM).forEach(j=>m.add(j));
+    } else {
+      const fronts=seeds.map(s=>{ m.add(s); return [s]; }), cap=style==='scatter'?Math.ceil(wantM/seeds.length):wantM;
+      const per=fronts.map(()=>1);
+      for (let guard=0; m.size<wantM && guard<wantM*40; guard++){
+        const fi=guard%fronts.length, front=fronts[fi]; if (!front.length || per[fi]>=cap) continue;
+        const k=Math.floor(rnd()*front.length), j=front[k], [x,y]=xy(j); let grew=false;
+        for (const [dx,dy] of D4.slice().sort(()=>rnd()-.5)){ const q=(y+dy)*N+x+dx; if (L[q]&&dist[q]>=2&&!m.has(q)){ m.add(q); front.push(q); per[fi]++; grew=true; break; } }
+        if (!grew) front.splice(k,1);
+        if (fronts.every((f,i)=>!f.length||per[i]>=cap)) break; }
+    }
+    for (const j of m) T[j]=5;
+    if (c.ore){ const edge=[...m].filter(j=>D4.some(([dx,dy])=>{ const q=j+dy*N+dx; return L[q]&&!m.has(q); })).sort(()=>rnd()-.5);
+      for (let k=0;k<Math.min(Math.max(2,Math.ceil(m.size*.35)),edge.length);k++) ore[edge[k]]=1; }
+  }
+  let gc=others.filter(c=>c.mount&&(c.biome==='vulkan'||c.biome==='nordisch')); if (!gc.length) gc=others.filter(c=>c.mount); if (!gc.length) gc=[homeC];
+  gc.sort(()=>rnd()-.5).slice(0,Math.max(2,Math.floor(gc.length/3))).forEach(c=>{
+    const mt=c.tiles.filter(j=>T[j]===5 && !ore[j] && D4.some(([dx,dy])=>{ const q=j+dy*N+dx; return L[q]&&T[q]!==5; }));
+    mt.sort(()=>rnd()-.5).slice(0,Math.max(2,Math.ceil(mt.length*.3))).forEach(j=>{ gold[j]=1; }); if (mt.length) c.gold=true; });
+  for (let i=0;i<N*N;i++){
+    const x=i%N, y=(i/N)|0;
+    shade[i]=Math.floor(hash2(x,y,seed+5)*4);
+    if (!L[i]){ T[i]=wd[i]<=1?1:wd[i]===2?2:0; continue; }
+    if (T[i]===5) continue;
+    const c=comps[isl[i]];
+    T[i] = dist[i]<=1 && fbm(x*.16,y*.16,seed+313)<c.rocky ? 3 : 4;
+    if (T[i]===4 && dist[i]>=2 && fbm(x*.21,y*.21,seed+99)>BIOMES[c.biome].tree+c.treeAdj) tree[i]=1+Math.floor(hash2(x,y,seed+3)*200);
+  }
+  return { seed, ver:3, T, isl, ore, gold, tree, shade, dist, wd, comps, home:homeC.id };
+}
 // shared after-processing: nearest island for every tile (lets water near a coast take on that island's climate colours)
 function finishMap(M,ver){
-  if (ver!==2) for (const c of M.comps) c.biome = c.tee ? 'tropisch' : 'gemaessigt';
+  if (ver===1) for (const c of M.comps) c.biome = c.tee ? 'tropisch' : 'gemaessigt';
   M.ver=ver;
   { const r3=mulberry32(M.seed+9091), others=M.comps.filter(c=>c.id!==M.home);
     for (const c of others){ const B0=c.biome;
@@ -654,9 +782,9 @@ const shipSpeed = s => (s.speed||3.2)*(hasTech('rumpf')?1.2:1);
 const shipTime = b => (SHIPTYPES[b.shipType]||SHIPTYPES.kogge).time;
 const ORE_MAX=100, GOLD_MAX=60;
 function makeShip(id,name,x,y,cap,type='kogge'){ return { id, name, x, y, path:[], ang:.8, da:.8, cargo:emptyGoods(), cap, type, speed:SHIPTYPES[type].speed, route:null, rwait:0 }; }
-function newState(seed, demo, ver=2, n=MAP_N){
+function newState(seed, demo, ver=3, n=MAP_N){
   N = ver===1 ? 80 : n;
-  const map = finishMap(ver===1 ? genMapV1(seed) : genMapV2(seed), ver);
+  const map = finishMap(ver===1 ? genMapV1(seed) : ver===2 ? genMapV2(seed) : genMapV3(seed), ver);
   const g = {
     seed, map, demo:!!demo, t:0, gold:2500, stores:{}, sup:{}, caps:{}, made:{}, founded:false, speed:1, lastSpeed:1,
     buildings:[], byId:new Map(), nextId:1, road:new Uint8Array(N*N), occ:new Int32Array(N*N),
