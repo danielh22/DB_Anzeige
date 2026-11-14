@@ -974,7 +974,11 @@ function moveShip(s,dt,speed){
   s.moving = s.path.length>0;
 }
 function dockFor(k){
-  let best=null; border(k.x,k.y,2,i=>{ if (!best && nav(i)) best=i; });
+  let best=null; border(k.x,k.y,2,i=>{ if (best==null && nav(i)) best=i; });
+  if (best!=null) return best;
+  // kontor touches water only diagonally or a little further away: use the closest water tile
+  let bd=1e9;
+  for (let y=k.y-3; y<=k.y+4; y++) for (let x=k.x-3; x<=k.x+4; x++){ if (!inB(x,y) || !nav(y*N+x)) continue; const d=Math.hypot(x+.5-(k.x+1),y+.5-(k.y+1)); if (d<bd){ bd=d; best=y*N+x; } }
   return best;
 }
 const kontorOn = isl => G.buildings.find(b=>b.t==='kontor' && b.isl===isl);
@@ -2388,7 +2392,7 @@ function drawJumps(c,rt){
 function harbourGeo(k){
   if (k._hb!==undefined) return k._hb;
   const dock=dockFor(k); if (dock==null){ k._hb=null; return null; }
-  const dx=dock%N, dy=(dock/N)|0, fx=Math.max(k.x,Math.min(k.x+1,dx)), fy=Math.max(k.y,Math.min(k.y+1,dy)), vx=dx-fx, vy=dy-fy;
+  const dx=dock%N, dy=(dock/N)|0, fx=Math.max(k.x,Math.min(k.x+1,dx)), fy=Math.max(k.y,Math.min(k.y+1,dy)); let vx=Math.sign(dx-fx), vy=Math.sign(dy-fy); if (vx&&vy){ if (Math.abs(dx-fx)>=Math.abs(dy-fy)) vy=0; else vx=0; } if (!vx&&!vy) vx=1;
   const len = inB(dx+vx,dy+vy) && nav((dy+vy)*N+dx+vx) ? 2 : 1;
   const s0=[fx+.5+vx*.5, fy+.5+vy*.5], s1=[dx+.5+vx*(len-.65), dy+.5+vy*(len-.65)];
   k._hb={ s0, s1, px:-vy*.2, py:vx*.2, vx, vy }; return k._hb;
@@ -3175,7 +3179,7 @@ function shipAct(k,v){
   const next=(cur,skip)=>{ const o=ks.filter(i=>i!==skip); return o[(o.indexOf(cur)+1)%o.length]; };
   if (k==='load' && dk) transfer(s,dk.isl,v,10);
   else if (k==='unload' && dk) transfer(s,dk.isl,v,-10);
-  else if (k==='unloadall' && dk) for (const g of GK) if (s.cargo[g]) transfer(s,dk.isl,g,-s.cargo[g]);
+  else if (k==='unloadall' && dk){ for (const g of GK){ if (s.cargo[g]) transfer(s,dk.isl,g,-s.cargo[g]); } }
   else if (k==='ra'){ const r=rt(); r.a=next(r.a,r.b); r.on=false; }
   else if (k==='rb'){ const r=rt(); r.b=next(r.b,r.a); r.on=false; }
   else if (k==='rg'){ const r=rt(), c=r.goods[v]||0; r.goods[v] = c===0?1 : c===1?-1 : 0; }
