@@ -324,8 +324,8 @@ const B = {
   wirtshaus:{n:'Wirtshaus', s:1, cost:{gold:500, holz:6, werkzeug:3, ziegel:6}, up:18, radius:8, svc:'wirtshaus', unlock:{t:[2,50]}, desc:'Kaufleute treffen sich im Wirtshaus. Bürger steigen nur in seiner Reichweite auf.'},
   theater:{n:'Theater', s:2, cost:{gold:1500, holz:8, werkzeug:6, ziegel:20}, up:35, radius:11, svc:'theater', unlock:{t:[3,60]}, desc:'Aristokraten verlangen ein Theater. Kaufleute steigen nur in seiner Reichweite auf.'},
   kathedrale:{n:'Kathedrale', s:2, cost:{gold:6000, werkzeug:20, stein:40, ziegel:60}, up:50, unlock:{t:[4,100]}, desc:'Ein Prachtbau für deine Kolonie. Erhöht alle Steuereinnahmen um 10 %.'},
-  feuerwehr:{n:'Feuerwehr', s:1, cost:{gold:300, holz:5, werkzeug:2}, up:8, radius:9, svc:'feuerwehr', unlock:{pop:60}, desc:'Löscht Brände im Umkreis von 9 Feldern, bevor Gebäude abbrennen, und senkt die Brandgefahr dort.'},
-  arzt:{n:'Arzt', s:1, cost:{gold:450, holz:4, werkzeug:2, ziegel:4}, up:12, radius:9, svc:'arzt', unlock:{t:[2,20]}, desc:'Heilt Seuchen im Umkreis von 9 Feldern schnell und verhindert, dass sie sich ausbreiten.'},
+  feuerwehr:{n:'Feuerwehr', s:1, cost:{gold:300, holz:5, werkzeug:2}, up:8, radius:9, svc:'feuerwehr', unlock:{pop:60}, desc:'Löscht Brände im Umkreis von 9 Feldern, bevor Wohnhäuser abbrennen, und senkt die Brandgefahr dort. Brände gibt es erst, wenn die Feuerwehr gebaut werden kann.'},
+  arzt:{n:'Arzt', s:1, cost:{gold:450, holz:4, werkzeug:2, ziegel:4}, up:12, radius:9, svc:'arzt', unlock:{t:[2,20]}, desc:'Heilt Seuchen im Umkreis von 9 Feldern schnell und verhindert, dass sie sich ausbreiten. Seuchen gibt es erst, wenn der Arzt gebaut werden kann.'},
   werft:{n:'Werft', s:2, cost:{gold:600, holz:12, werkzeug:4}, up:10, unlock:{t:[1,30]}, desc:'Baut Handelsschiffe für Routen zwischen deinen Inseln. Muss direkt am Wasser stehen. Ein Schiff kostet 1.200 Gold, 30 Holz, 10 Stoff und 8 Werkzeug.'},
   foerster:{n:'Förster', s:1, cost:{gold:60, holz:3}, up:3, unlock:{pop:15}, desc:'Pflanzt alle 12 Sekunden einen Baum auf freiem Grasland im Umkreis von 3 Feldern. Junge Bäume brauchen etwa anderthalb Minuten, bis man sie fällen kann.'},
   holzfaeller:{n:'Holzfäller', s:1, cost:{gold:50, holz:2}, up:3, out:'holz', time:12, desc:'Fällt Bäume im Umkreis von 3 Feldern. Mit 8 Bäumen in Reichweite arbeitet er voll. Der Wald wird dabei lichter, ein Förster pflanzt nach.'},
@@ -797,28 +797,34 @@ const shipCap = s => Math.round(s.cap*(hasTech('laderaum')?1.25:1));
 const shipSpeed = s => (s.speed||3.2)*(hasTech('rumpf')?1.2:1);
 const shipTime = b => (SHIPTYPES[b.shipType]||SHIPTYPES.kogge).time*[1,.7,.5][(b.lvl||1)-1];
 // building levels I-III
-const LVL_N=['I','II','III'], LVL_REQ={2:{t:[2,1]},3:{t:[3,1]}}, LVL_PROD=[1,1.4,1.8];
+// Kontor and Werft go to III; every other building gets only one upgrade (II), with steep requirements and a modest effect
+const LVL_N=['I','II','III'], LVL_PROD=[1,1.2];
 const canLevel = t => !['strasse','haus','kathedrale'].includes(t);
-const lvlOf = b => b.lvl||1;
-function lvlReqOk(to){ const u=LVL_REQ[to]; return atLeast(u.t[0])>=u.t[1]; }
+const bigLvl = t => t==='kontor' || t==='werft';
+const maxLvl = t => bigLvl(t) ? 3 : 2;
+const lvlOf = b => Math.min(b.lvl||1, maxLvl(b.t));
+const lvlStep = b => (lvlOf(b)-1)*(bigLvl(b.t)?2:1);   // extra radius per level
+function lvlReq(b,to){ if (bigLvl(b.t)) return to===2 ? {t:[2,60]} : {t:[3,120]}; if (b.t==='universitaet') return {t:[4,80]}; return {t:[3,50]}; }
+function lvlReqOk(b,to){ const u=lvlReq(b,to); return atLeast(u.t[0])>=u.t[1]; }
 function upgCost(b,to){
-  if (b.t==='kontor') return to===2 ? {gold:1500, holz:15, werkzeug:8, ziegel:10} : {gold:4000, werkzeug:15, ziegel:25, glas:10};
-  if (b.t==='werft') return to===2 ? {gold:1500, holz:20, werkzeug:10, ziegel:10} : {gold:3500, werkzeug:15, ziegel:20, eisen:10, glas:6};
+  if (b.t==='kontor') return to===2 ? {gold:2500, holz:25, werkzeug:12, ziegel:18} : {gold:6500, werkzeug:22, ziegel:35, glas:15, eisen:8};
+  if (b.t==='werft') return to===2 ? {gold:2500, holz:30, werkzeug:15, ziegel:18} : {gold:5500, werkzeug:22, ziegel:30, eisen:15, glas:10};
   const d=B[b.t], c={};
-  for (const k in d.cost) c[k] = k==='gold' ? Math.round(d.cost.gold*(to===2?1.2:2.2)) : Math.ceil(d.cost[k]*(to===2?.8:1.2));
-  c.ziegel=(c.ziegel||0)+(to===2?4:8); if (to===3) c.glas=(c.glas||0)+3;
+  for (const k in d.cost) c[k] = k==='gold' ? Math.round(d.cost.gold*2.5) : Math.ceil(d.cost[k]*1.5);
+  c.ziegel=(c.ziegel||0)+12; c.werkzeug=(c.werkzeug||0)+6; c.glas=(c.glas||0)+4;
+  if (b.t==='universitaet'){ c.gold=Math.round(d.cost.gold*4); c.glas+=16; c.ziegel+=20; c.moebel=(c.moebel||0)+12; c.schmuck=(c.schmuck||0)+6; }
   return c;
 }
 function lvlEffect(b,to){
   const d=B[b.t];
   if (b.t==='kontor') return to===2 ? 'Lager +50 je Ware, Baugebiet +3 Felder, Marktreichweite +2 Felder' : 'Lager +50 je Ware, Baugebiet +3 Felder, Marktreichweite +2 Felder, Händler zahlen hier 10 % mehr';
   if (b.t==='werft') return to===2 ? 'Bauzeit 30 % kürzer, die Fleute kann gebaut werden' : 'Bauzeit halbiert, neue Schiffe fassen 20 % mehr';
-  if (b.t==='markt') return 'Lager +20 je Ware, Reichweite und Baugebiet +2 Felder';
-  if (b.t==='lager') return 'Lager +40 je Ware';
-  if (b.t==='universitaet') return to===2 ? '15 statt 10 Wissen pro Minute' : '22 Wissen pro Minute';
-  if (b.t==='foerster') return 'Pflanzt deutlich schneller';
-  if (d.svc) return 'Reichweite +2 Felder';
-  if (d.out) return to===2 ? '40 % mehr Produktion, Unterhalt +50 %' : '80 % mehr Produktion, Unterhalt doppelt so hoch';
+  if (b.t==='markt') return 'Lager +10 je Ware, Reichweite und Baugebiet +1 Feld';
+  if (b.t==='lager') return 'Lager +20 je Ware';
+  if (b.t==='universitaet') return '13 statt 10 Wissen pro Minute';
+  if (b.t==='foerster') return 'Pflanzt etwas schneller';
+  if (d.svc) return 'Reichweite +1 Feld';
+  if (d.out) return '20 % mehr Produktion, Unterhalt +50 %';
   return '';
 }
 const ORE_MAX=100, GOLD_MAX=60;
@@ -884,9 +890,9 @@ function recompute(){
     const d=B[b.t], cx=b.x+d.s/2, cy=b.y+d.s/2;
     if (d.hub) G.hubIds.add(b.id);
     const L=lvlOf(b)-1;
-    if (d.influence){ const id=b.isl; circle(cx,cy,d.influence+L*(b.t==='kontor'?3:2),i=>{ if (M.isl[i]===id) own[i]=1; }); }
-    if (d.radius){ const g = cov[d.hub?'markt':d.svc]; circle(cx,cy,d.radius+2*L+((d.svc==='feuerwehr'&&hasTech('brandschutz'))||(d.svc==='arzt'&&hasTech('medizin'))?3:0),i=>{ g[i]=1; }); }
-    const add = (b.t==='kontor'?50 : b.t==='markt'?20 : b.t==='lager'?(d.store||40) : 0)*(L+1);
+    if (d.influence){ const id=b.isl; circle(cx,cy,d.influence+L*(b.t==='kontor'?3:1),i=>{ if (M.isl[i]===id) own[i]=1; }); }
+    if (d.radius){ const g = cov[d.hub?'markt':d.svc]; circle(cx,cy,d.radius+lvlStep(b)+((d.svc==='feuerwehr'&&hasTech('brandschutz'))||(d.svc==='arzt'&&hasTech('medizin'))?3:0),i=>{ g[i]=1; }); }
+    const add = b.t==='kontor' ? 50*(L+1) : b.t==='markt' ? 20+10*L : b.t==='lager' ? (d.store||40)+20*L : 0;
     if (add) G.caps[b.isl]=(G.caps[b.isl]||30)+add;
   }
   const q=[];
@@ -1052,7 +1058,7 @@ function step(dt){
   for (const s of G.ships) routeTick(s,dt);
   werftTick(dt);
   eventsTick(dt);
-  for (const b of G.buildings) if (b.t==='universitaet' && !(b.build<1) && !(b.fire>0) && b.on) G.rp+=dt*[10,15,22][lvlOf(b)-1]/60;
+  for (const b of G.buildings) if (b.t==='universitaet' && !(b.build<1) && !(b.fire>0) && b.on) G.rp+=dt*[10,13][lvlOf(b)-1]/60;
   G.secAcc+=dt;
   if (G.secAcc>=1){ G.secAcc=0; natureTick(1); checkUnlocks(); checkGoals(); warnings(); }
   if (G.treesDirty) recountTrees();
@@ -1110,7 +1116,7 @@ function natureTick(dt){
     if (inB(x+dx,y+dy) && Math.random()<.12 && M.T[j]===4 && !M.tree[j] && !G.occ[j] && !G.road[j]) plantTree(j); }
   for (const b of G.buildings){ if (b.t!=='foerster' || b.build<1 || b.fire>0) continue;
     if (!b.on){ b.st='Angehalten'; continue; }
-    b.ft=(b.ft||0)+dt; if (b.ft<12/[1,1.6,2.5][lvlOf(b)-1]) { if (!b.st) b.st='Pflanzt Bäume'; continue; } b.ft=0;
+    b.ft=(b.ft||0)+dt; if (b.ft<12/[1,1.3][lvlOf(b)-1]) { if (!b.st) b.st='Pflanzt Bäume'; continue; } b.ft=0;
     const c=[]; circle(b.x+.5,b.y+.5,3.3,i=>{ if (M.T[i]===4 && !M.tree[i] && !G.occ[i] && !G.road[i]) c.push(i); });
     if (c.length){ plantTree(c[Math.floor(Math.random()*c.length)]); b.st='Pflanzt Bäume'; b.active=true; } else { b.st='Kein Platz zum Pflanzen'; b.active=false; } }
   for (let i=0;i<N*N;i++){
@@ -1321,7 +1327,7 @@ function evMult(b){
   }
   return m;
 }
-function ignite(b){ if (b.fire>0 || b.t==='kontor' || b.build<1) return false; b.fire=.01; b.fspread=0; return true; }
+function ignite(b){ if (b.fire>0 || b.t!=='haus' || b.build<1) return false; b.fire=.01; b.fspread=0; return true; }
 function eventsTick(dt){
   if (G.demo || !G.founded) return;
   for (const e of G.events) e.left-=dt;
@@ -1351,15 +1357,16 @@ function eventsTick(dt){
 function triggerEvent(){
   const built=G.buildings.filter(b=>!(b.build<1)), houses=built.filter(b=>b.t==='haus'), farms=built.filter(b=>FARMS.has(b.t)), fishers=built.filter(b=>b.t==='fischer');
   const opts=[];
-  if (built.length>=6) opts.push(['fire',hasTech('brandschutz')?.12:.3]);
-  if (houses.filter(h=>h.tier>=1).length>=3) opts.push(['plague',hasTech('medizin')?.06:.16]);
+  // fires and plagues only once the matching remedy can be built
+  if (houses.length>=6 && isUnlocked('feuerwehr')) opts.push(['fire',hasTech('brandschutz')?.12:.3]);
+  if (houses.filter(h=>h.tier>=1).length>=3 && isUnlocked('arzt')) opts.push(['plague',hasTech('medizin')?.06:.16]);
   opts.push(['storm',.15]);
   if (farms.length) opts.push(['blight',.11],['harvest',.12]);
   if (fishers.length) opts.push(['shoal',.1]);
   if (G.trader.st==='away') opts.push(['fleet',.06]);
   let r=Math.random()*opts.reduce((a,o)=>a+o[1],0), k=opts[0][0]; for (const [n,w] of opts){ if ((r-=w)<=0){ k=n; break; } }
   const pickIsl = list => list[Math.floor(Math.random()*list.length)].isl;
-  if (k==='fire'){ const c=built.filter(b=>b.t!=='kontor'), b=c[Math.floor(Math.random()*c.length)];
+  if (k==='fire'){ const c=houses, b=c[Math.floor(Math.random()*c.length)];
     if (cov.feuerwehr[b.y*N+b.x] && Math.random()<.6) return;
     if (ignite(b)) toast(`Feuer! ${b.t==='haus'?TIERS[b.tier].house:B[b.t].n} auf ${islName(b.isl)} brennt.`,'warn'); }
   else if (k==='plague'){ const c=houses.filter(h=>h.tier>=1), b=c[Math.floor(Math.random()*c.length)];
@@ -1640,15 +1647,39 @@ function drawStatic(c,type,cx,cy,o){
   switch(type){
   case 'haus': drawHouse(c,cx,cy,o.tier||0,sd); break;
   case 'kontor': {
-    P(c,[[cx,cy-30],[cx+60,cy],[cx,cy+30],[cx-60,cy]],'#a98c5e');
-    c.save(); path(c,[[cx,cy-30],[cx+60,cy],[cx,cy+30],[cx-60,cy]]); c.clip();
-    for (let k=-15;k<=15;k++){ c.fillStyle=k%2?'rgba(255,230,180,.07)':'rgba(60,40,20,.08)'; path(c,[[cx-30+k*4,cy-15-k*2+0],[cx+30+k*4,cy+15-k*2],[cx+30+k*4+4,cy+15-k*2-2],[cx-30+k*4+4,cy-15-k*2-2]]); c.fill(); }
-    c.strokeStyle='rgba(60,40,20,.3)'; c.lineWidth=.5; c.beginPath(); for (let k=-15;k<=15;k++) ln(c,[cx-30+k*4,cy-15-k*2],[cx+30+k*4,cy+15-k*2]); c.stroke();
-    c.restore();
-    c.strokeStyle='#6e5638'; c.lineWidth=1.6; c.beginPath(); c.moveTo(cx,cy-30); c.lineTo(cx+60,cy); c.lineTo(cx,cy+30); c.lineTo(cx-60,cy); c.closePath(); c.stroke();
+    const kl=o.lvl||1;
+    if (kl>=2){ // cobbled yard instead of planks
+      P(c,[[cx,cy-30],[cx+60,cy],[cx,cy+30],[cx-60,cy]],'#b3a892');
+      c.save(); path(c,[[cx,cy-30],[cx+60,cy],[cx,cy+30],[cx-60,cy]]); c.clip(); c.strokeStyle='rgba(70,60,48,.32)'; c.lineWidth=.6; c.beginPath();
+      for (let k=-15;k<=15;k++){ ln(c,[cx-60+k*4,cy-k*2],[cx+k*4,cy+30-k*2]); ln(c,[cx+k*4,cy-30+k*2],[cx+60+k*4,cy+k*2]); } c.stroke();
+      for (let k=0;k<70;k++){ const u=hash2(k,3,7)-.5, v=hash2(k,5,9)-.5; E(c,cx+(u-v)*110,cy+(u+v)*55,1.4,.7,k%2?'rgba(255,245,225,.18)':'rgba(60,50,40,.14)'); }
+      c.restore(); c.strokeStyle='#7d7262'; c.lineWidth=1.6; c.beginPath(); c.moveTo(cx,cy-30); c.lineTo(cx+60,cy); c.lineTo(cx,cy+30); c.lineTo(cx-60,cy); c.closePath(); c.stroke();
+    } else {
+      P(c,[[cx,cy-30],[cx+60,cy],[cx,cy+30],[cx-60,cy]],'#a98c5e');
+      c.save(); path(c,[[cx,cy-30],[cx+60,cy],[cx,cy+30],[cx-60,cy]]); c.clip();
+      for (let k=-15;k<=15;k++){ c.fillStyle=k%2?'rgba(255,230,180,.07)':'rgba(60,40,20,.08)'; path(c,[[cx-30+k*4,cy-15-k*2+0],[cx+30+k*4,cy+15-k*2],[cx+30+k*4+4,cy+15-k*2-2],[cx-30+k*4+4,cy-15-k*2-2]]); c.fill(); }
+      c.strokeStyle='rgba(60,40,20,.3)'; c.lineWidth=.5; c.beginPath(); for (let k=-15;k<=15;k++) ln(c,[cx-30+k*4,cy-15-k*2],[cx+30+k*4,cy+15-k*2]); c.stroke();
+      c.restore();
+      c.strokeStyle='#6e5638'; c.lineWidth=1.6; c.beginPath(); c.moveTo(cx,cy-30); c.lineTo(cx+60,cy); c.lineTo(cx,cy+30); c.lineTo(cx-60,cy); c.closePath(); c.stroke();
+    }
     softShadow(c,cx,cy+2,50,22,.35);
-    if ((o.lvl||1)>=2){ softShadow(c,cx+16,cy-14,16,7); box(c,cx+16,cy-16,12,6,16,'#c7b48c','plank'); win(c,face(cx+16,cy-16,12,6,'L'),.3,8,.3,4,{frame:'#8a7a5c'}); gable(c,cx+16,cy-16,12,6,16,9,'#7a3a2a','#c7b48c'); }
-    if ((o.lvl||1)>=3){ box(c,cx-30,cy-14,6,3,42,'#e2d6bc','stone'); const TL=face(cx-30,cy-14,6,3,'L'); E(c,...TL(.5,34),2.2,2.2,'#f4efe2'); c.strokeStyle='#3a3540'; c.lineWidth=.6; c.beginPath(); const cc=TL(.5,34); c.moveTo(cc[0],cc[1]); c.lineTo(cc[0],cc[1]-1.6); c.moveTo(cc[0],cc[1]); c.lineTo(cc[0]+1.2,cc[1]); c.stroke(); pyramid(c,cx-30,cy-14,6,3,42,14,'#8e3f2f'); }
+    if (kl>=2){ // big stone warehouse behind the office
+      softShadow(c,cx+24,cy-12,26,11,.35);
+      box(c,cx+24,cy-15,20,10,20,'#d6ccb6','stone');
+      const WL=face(cx+24,cy-15,20,10,'L'), WR=face(cx+24,cy-15,20,10,'R');
+      P(c,[WL(.3,0),WL(.7,0),WL(.7,12),WL(.3,12)],'#4a3424'); c.strokeStyle='rgba(255,220,170,.25)'; c.lineWidth=.5; c.beginPath(); ln(c,WL(.5,0),WL(.5,12)); c.stroke();
+      win(c,WR,.2,12,.2,4,{frame:'#efe7d4'}); win(c,WR,.6,12,.2,4,{frame:'#efe7d4'});
+      gable(c,cx+24,cy-15,20,10,20,12,'#3d5a7e','#d6ccb6');
+    }
+    if (kl>=3){ // clock tower with copper spire
+      softShadow(c,cx-36,cy-8,10,5,.35);
+      box(c,cx-36,cy-10,7,3.5,50,'#e6dcc4','stone');
+      const TL=face(cx-36,cy-10,7,3.5,'L'), TR=face(cx-36,cy-10,7,3.5,'R');
+      const cc=TL(.5,40); E(c,cc[0],cc[1],3,3.3,'#f6f0e2'); c.strokeStyle='#2e2a30'; c.lineWidth=.7; c.beginPath(); c.moveTo(cc[0],cc[1]); c.lineTo(cc[0],cc[1]-2.3); c.moveTo(cc[0],cc[1]); c.lineTo(cc[0]+1.6,cc[1]+.4); c.stroke();
+      win(c,TR,.3,30,.4,6,{frame:'#c9c0ad'}); win(c,TL,.3,22,.4,5,{frame:'#c9c0ad'}); win(c,TR,.3,14,.4,5,{frame:'#c9c0ad'});
+      pyramid(c,cx-36,cy-10,7,3.5,50,18,'#4f9a86');
+      E(c,cx-36,cy-10-50-18-3.5,1.6,1.6,'#e3a948');
+    }
     const X=cx-8, Y=cy-4, a=34, b=17;
     box(c,X,Y,a,b,13,'#b8a684','stone');
     box(c,X,Y-13,a,b,13,'#ece2c8','timber');
@@ -1657,15 +1688,15 @@ function drawStatic(c,type,cx,cy,o){
     for (const u of [.15,.55]) win(c,FLd,u,4,.14,4.5,{frame:'#8a7a5c'});
     door(c,FR,.28,.38,10.5,'#5a3a22');
     P(c,[FRu(.35,2),FRu(.6,2),FRu(.6,10),FRu(.35,10)],'#3a2818');
-    gable(c,X,Y,a,b,26,17,'#8e3f2f','#ece2c8');
+    gable(c,X,Y,a,b,26,17,kl>=3?'#3d5a7e':'#8e3f2f','#ece2c8');
     // hoist beam
     c.strokeStyle='#4a3424'; c.lineWidth=1.6; c.beginPath(); ln(c,[X+a/2,Y+b/2-26-6],[X+a/2+10,Y+b/2-26-1]); c.stroke();
     c.strokeStyle='rgba(40,30,20,.7)'; c.lineWidth=.6; c.beginPath(); ln(c,[X+a/2+9,Y+b/2-26-1.5],[X+a/2+9,Y+b/2-12]); c.stroke();
     box(c,X+a/2+9,Y+b/2-10,2.5,1.25,3,'#9a6b3c','plank');
     box(c,cx+28,cy+8,6,3,7,'#9a6b3c','plank'); box(c,cx+36,cy+3,5,2.5,5,'#86592f','plank'); box(c,cx+21,cy+14,5,2.5,10,'#a77a45','plank');
     barrel(c,cx+43,cy+10); barrel(c,cx+47,cy+6.5); sack(c,cx+12,cy+20); sack(c,cx+16,cy+21.5); sack(c,cx+14,cy+18,'#cdb27f');
-    c.strokeStyle='#4a3424'; c.lineWidth=1.8; c.beginPath(); c.moveTo(cx-34,cy-44); c.lineTo(cx-34,cy-70); c.stroke();
-    E(c,cx-34,cy-70.5,1.3,1.3,'#e3a948');
+    if (kl<3){ c.strokeStyle='#4a3424'; c.lineWidth=1.8; c.beginPath(); c.moveTo(cx-34,cy-44); c.lineTo(cx-34,cy-70); c.stroke();
+      E(c,cx-34,cy-70.5,1.3,1.3,'#e3a948'); }
     break; }
   case 'markt': {
     plaza(c,cx,cy,54,27,'#cdb88d',11);
@@ -2030,12 +2061,34 @@ function drawStatic(c,type,cx,cy,o){
     softShadow(c,cx-20,cy-8,18,8);
     const wl=o.lvl||1, wh=wl>=2?20:14;
     if (wl>=3){ P(c,[[cx+4,cy-14],[cx+40,cy+4],[cx+30,cy+9],[cx-6,cy-9]],'#9a958a'); c.strokeStyle='#6d6a62'; c.lineWidth=1; c.beginPath(); ln(c,[cx+4,cy-14],[cx+40,cy+4]); ln(c,[cx-6,cy-9],[cx+30,cy+9]); c.stroke(); }
-    box(c,cx-22,cy-10,14,7,wh,wl>=2?'#9a7448':'#86603d','plank'); door(c,face(cx-22,cy-10,14,7,'R'),.3,.4,10,'#3e2818');
-    if (wl>=2) win(c,face(cx-22,cy-10,14,7,'L'),.3,12,.3,4,{frame:'#5a3c22'});
-    gable(c,cx-22,cy-10,14,7,wh,10,wl>=2?'#4a3a5a':'#5a3a2a',wl>=2?'#9a7448':'#86603d');
+    const shA=wl>=3?18:14, shB=wl>=3?9:7, shH=wl>=3?26:wh, shCol=wl>=3?'#d4cab4':wl>=2?'#9a7448':'#86603d';
+    box(c,cx-22,cy-10,shA,shB,shH,shCol,wl>=3?'stone':'plank'); door(c,face(cx-22,cy-10,shA,shB,'R'),.3,.4,wl>=3?14:10,'#3e2818');
+    if (wl>=2){ win(c,face(cx-22,cy-10,shA,shB,'L'),.2,shH-8,.2,4,{frame:wl>=3?'#efe7d4':'#5a3c22'}); if (wl>=3) win(c,face(cx-22,cy-10,shA,shB,'L'),.6,shH-8,.2,4,{frame:'#efe7d4'}); }
+    gable(c,cx-22,cy-10,shA,shB,shH,wl>=3?13:10,wl>=3?'#3d5a7e':wl>=2?'#4a3a5a':'#5a3a2a',shCol);
     c.strokeStyle='#6e4f2c'; c.lineWidth=2; c.beginPath(); ln(c,[cx-6,cy-14],[cx+34,cy+6]); ln(c,[cx-14,cy-10],[cx+26,cy+10]); c.stroke();
     c.strokeStyle='rgba(60,40,20,.5)'; c.lineWidth=.8; c.beginPath(); for (let k=0;k<9;k++){ const t=k/8; ln(c,lerp2([cx-6,cy-14],[cx+34,cy+6],t),lerp2([cx-14,cy-10],[cx+26,cy+10],t)); } c.stroke();
     for (let k=0;k<3;k++) for (let j=0;j<3-k;j++) logEnd(c,cx-28+j*4.6+k*2.3,cy+8-k*4,2.2);
+    if (wl>=2){ // a hull on the slipway: bare ribs at II, a finished painted hull at III
+      const A=[cx-1,cy-11], Z=[cx+29,cy+4], n=10, pt=t=>{ const p=lerp2(A,Z,t), w=(wl>=3?6.5:7.5)*Math.sin(Math.PI*(.08+.84*t))**.7, h=(wl>=3?15:8)*Math.sin(Math.PI*(.05+.9*t))**.4+2; return [p,w,h]; };
+      if (wl>=3){
+        const side=[], deck=[], keel=[];
+        for (let k=0;k<=n;k++){ const [p,w,h]=pt(k/n); side.push([p[0]-1.8*w*.5,p[1]+w*.5-h]); deck.push([p[0]+1.8*w*.5,p[1]-w*.5-h]); keel.push([p[0],p[1]+1]); }
+        c.fillStyle='#c9a46a'; path(c,[...side,...deck.slice().reverse()]); c.fill();
+        c.strokeStyle='rgba(90,60,30,.4)'; c.lineWidth=.5; c.beginPath(); for (let k=1;k<n;k++) ln(c,side[k],deck[k]); c.stroke();
+        c.fillStyle=vgrad(c,cy-20,cy+5,'#7a4a2a','#4a2a18'); path(c,[...side,...keel.slice().reverse()]); c.fill();
+        c.strokeStyle='#e3a948'; c.lineWidth=1; c.beginPath(); c.moveTo(side[0][0],side[0][1]+1.5); for (const q of side) c.lineTo(q[0],q[1]+1.5); c.stroke();
+        c.strokeStyle='#2e3c4a'; c.lineWidth=1.6; c.beginPath(); for (let k=0;k<=n;k++){ const q=lerp2(side[k],keel[k],.6); k?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1]); } c.stroke();
+        for (let k=3;k<n-1;k+=2){ const q=lerp2(side[k],keel[k],.3); P(c,[[q[0]-1.2,q[1]-1.1],[q[0]+1.2,q[1]-.5],[q[0]+1.2,q[1]+1.2],[q[0]-1.2,q[1]+.6]],'#1e1610'); }
+        c.strokeStyle='#5a3c22'; c.lineWidth=1; c.beginPath(); for (let k=2;k<n-1;k+=2){ const q=keel[k]; ln(c,[q[0],q[1]],[q[0]-3,q[1]+4]); ln(c,[q[0],q[1]],[q[0]+3,q[1]+3]); } c.stroke();
+        const mp=lerp2(A,Z,.45); c.strokeStyle='#5a3c22'; c.lineWidth=1.6; c.beginPath(); ln(c,[mp[0],mp[1]-9],[mp[0],mp[1]-34]); ln(c,[mp[0]-6,mp[1]-28],[mp[0]+6,mp[1]-25]); c.stroke();
+      } else {
+        c.strokeStyle='#5a3c22'; c.lineWidth=2; c.beginPath(); ln(c,A,Z); c.stroke();
+        c.strokeStyle='#8a6038'; c.lineWidth=1.3; c.beginPath();
+        for (let k=1;k<n;k++){ const [p,w,h]=pt(k/n); c.moveTo(p[0]-1.8*w*.5,p[1]+w*.5-h); c.quadraticCurveTo(p[0],p[1]+3,p[0]+1.8*w*.5,p[1]-w*.5-h); }
+        c.stroke();
+        c.strokeStyle='#a77a45'; c.lineWidth=1; c.beginPath(); for (const sgn of [-1,1]){ for (let k=1;k<n;k++){ const [p,w,h]=pt(k/n), q=[p[0]+sgn*1.8*w*.5,p[1]-sgn*w*.5-h]; k>1?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1]); } } c.stroke();
+      }
+    }
     c.strokeStyle='#4a3424'; c.lineWidth=1.6; c.beginPath(); ln(c,[cx+30,cy-6],[cx+30,cy-34]); ln(c,[cx+30,cy-32],[cx+14,cy-22]); c.stroke();
     c.strokeStyle='rgba(40,30,20,.7)'; c.lineWidth=.5; c.beginPath(); ln(c,[cx+16,cy-23],[cx+16,cy-12]); c.stroke();
     box(c,cx+16,cy-10,2.5,1.25,2.5,'#a77a45','plank');
@@ -2183,7 +2236,32 @@ function sprite(key,w,h,ay,draw){
   const c=cnv.getContext('2d'); c.scale(SPR,SPR); c.translate(w/2,ay); draw(c);
   s={cnv,w,h,ay}; sprites.set(key,s); return s;
 }
-function bSprite(type,tier,v,stage=0,lvl=1){ const s2=B[type].s===2; if (type!=='kontor'&&type!=='werft') lvl=1; return sprite('b|'+type+'|'+tier+'|'+v+'|'+stage+'|'+lvl, s2?150:100, s2?150:124, s2?102:88, c=>drawStatic(c,type,0,0,{tier,seed:v,stage,lvl})); }
+function bSprite(type,tier,v,stage=0,lvl=1){ const s2=B[type].s===2; if (!canLevel(type)) lvl=1; return sprite('b|'+type+'|'+tier+'|'+v+'|'+stage+'|'+lvl, s2?150:100, s2?150:124, s2?102:88, c=>{ drawStatic(c,type,0,0,{tier,seed:v,stage,lvl}); if (lvl>=2 && !bigLvl(type)) drawUpgraded(c,type,0,0); }); }
+// an upgraded building (level II) gets a stone side wing with a slate roof, a low wall with a gate and a banner
+function drawUpgraded(c,type,cx,cy){
+  const s2=B[type].s===2, W=s2?62:30, H=s2?31:15, k=s2?1.45:1;
+  const L=[cx-W,cy], Bt=[cx,cy+H], R=[cx+W,cy];
+  const wall=(a,b,h)=>{ P(c,[a,b,[b[0],b[1]-h],[a[0],a[1]-h]],'#9a9080'); c.strokeStyle='#d2c9b6'; c.lineWidth=1.2; c.beginPath(); ln(c,[a[0],a[1]-h],[b[0],b[1]-h]); c.stroke();
+    c.strokeStyle='rgba(60,50,40,.35)'; c.lineWidth=.5; c.beginPath(); for (let t=.15;t<1;t+=.18){ const p=lerp2(a,b,t); ln(c,[p[0],p[1]],[p[0],p[1]-h]); } c.stroke(); };
+  // side wing at the right corner
+  const wx=cx+W*.6, wy=cy+H*.05;
+  softShadow(c,wx+2,wy+2,13*k,5.5*k,.3);
+  box(c,wx,wy,8.5*k,4.25*k,12*k,'#e6dcc4','stone');
+  win(c,face(wx,wy,8.5*k,4.25*k,'L'),.28,5*k,.4,4.2*k,{frame:'#f4efe2',shutters:'#355a86'});
+  gable(c,wx,wy,8.5*k,4.25*k,12*k,7*k,'#3d6390','#e6dcc4');
+  c.fillStyle='#7a6a5a'; c.fillRect(wx+3*k,wy-12*k-9*k,2.2*k,6*k);
+  // low wall along the front edges with a gate at the front corner
+  const h=3.4*k;
+  wall(lerp2(L,Bt,.08),lerp2(L,Bt,.82),h); wall(lerp2(Bt,R,.18),lerp2(Bt,R,.45),h);
+  for (const g of [lerp2(L,Bt,.82),lerp2(Bt,R,.18)]){ box(c,g[0],g[1],1.8*k,.9*k,7*k,'#cfc5b0'); E(c,g[0],g[1]-7*k-1.6*k,1.5*k,1.5*k,'#f0c060'); }
+  // banner on a tall pole at the left corner
+  const px=cx-W*.72, py=cy+2;
+  c.strokeStyle='#3a2818'; c.lineWidth=1.4*k; c.beginPath(); c.moveTo(px,py); c.lineTo(px,py-34*k); c.stroke();
+  c.strokeStyle='#3a2818'; c.lineWidth=1; c.beginPath(); c.moveTo(px-.5,py-32*k); c.lineTo(px+9*k,py-30*k); c.stroke();
+  P(c,[[px+1,py-31.5*k],[px+9*k,py-29.5*k],[px+9*k,py-17*k],[px+5*k,py-19.5*k],[px+1,py-19*k]],'#3d6390');
+  P(c,[[px+2.5*k,py-28.5*k],[px+7.5*k,py-27.3*k],[px+7.5*k,py-25.6*k],[px+2.5*k,py-26.8*k]],'#e3a948');
+  E(c,px,py-34.5*k,1.4*k,1.4*k,'#e3a948');
+}
 function blit(s,x,y,k=1){ ctx.drawImage(s.cnv,x-s.w/2*k,y-s.ay*k,s.w*k,s.h*k); }
 function blit2(c,s,x,y,k=1){ c.drawImage(s.cnv,x-s.w/2*k,y-s.ay*k,s.w*k,s.h*k); }
 function treeSprite(kind,ci){
@@ -3358,8 +3436,8 @@ function act(a){
   else if (k==='tech'){ const T=TECHS.find(t=>t.k===v); if (T && !G.techs.has(T.k) && G.rp>=T.c){ G.rp-=T.c; G.techs.add(T.k); G.dirty=true; toast(`Erforscht: ${T.n}. ${T.d}`,'good'); renderPanel(true); } }
   else if (k==='tax'){ const [ti,lv]=v.split('.').map(Number); G.taxLv[ti]=lv; renderPanel(true); }
   else if (k==='toggle' && b){ b.on=!b.on; renderPanel(true); }
-  else if (k==='upgrade' && b && canLevel(b.t) && lvlOf(b)<3 && !(b.build<1)){ const to=lvlOf(b)+1, cost=upgCost(b,to);
-    if (!lvlReqOk(to)) toast(unlockText(LVL_REQ[to])+' möglich.','warn'); else if (missing(cost,b.isl)) toast('Dafür fehlt Material im Lager dieser Insel.','warn');
+  else if (k==='upgrade' && b && canLevel(b.t) && lvlOf(b)<maxLvl(b.t) && !(b.build<1)){ const to=lvlOf(b)+1, cost=upgCost(b,to);
+    if (!lvlReqOk(b,to)) toast(unlockText(lvlReq(b,to))+' möglich.','warn'); else if (missing(cost,b.isl)) toast('Dafür fehlt Material im Lager dieser Insel.','warn');
     else { pay(cost,b.isl); b.upTo=to; b.build=0; b.prog=0; G.dirty=true; renderPanel(true); } }
   else if (k==='demolish' && b){ if (panel.dataset.confirm==='1'){ demolishAt(b.x,b.y); panel.dataset.confirm=''; } else { panel.dataset.confirm='1'; renderPanel(true); } }
   else if (k==='buy') trade(v,5);
@@ -3452,7 +3530,7 @@ function renderPanel(force){
       const isle=G.map.comps[b.isl];
       sig=[b.id,confirm,capOf(b.isl),isle.id,cnt(b.t),b.st].join('|');
       const pills=fertPills(isle);
-      const svcTxt = d.hub ? (d.radius ? `Versorgt Häuser im Umkreis von ${d.radius+2*(lvlOf(b)-1)} Feldern mit Waren und nimmt Waren der angeschlossenen Betriebe an.` : d.desc) : d.svc ? `Erfüllt den Wunsch nach ${SVC_A[d.svc]} im Umkreis von ${d.radius+2*(lvlOf(b)-1)} Feldern.` : d.desc;
+      const svcTxt = d.hub ? (d.radius ? `Versorgt Häuser im Umkreis von ${d.radius+lvlStep(b)} Feldern mit Waren und nimmt Waren der angeschlossenen Betriebe an.` : d.desc) : d.svc ? `Erfüllt den Wunsch nach ${SVC_A[d.svc]} im Umkreis von ${d.radius+lvlStep(b)} Feldern.` : d.desc;
       html=head(d.n, `Stufe ${LVL_N[lvlOf(b)-1]} · Insel ${isle.name} · Unterhalt ${Math.round(d.up*(1+.5*(lvlOf(b)-1)))} Gold/min`)+
         `<div class="sec"><p class="note">${svcTxt}</p>${d.hub?`<div class="row"><span class="l">Lagerplatz je Ware auf ${isle.name}</span><span class="v">${capOf(b.isl)}</span></div>`:''}${b.t==='foerster'?`<div class="row"><span class="l">Zustand</span><span class="pill">${b.st||'Wartet'}</span></div>`:''}</div>
         <div class="sec"><h4>Fruchtbarkeit der Insel</h4><div>${pills}</div></div>
@@ -3508,11 +3586,11 @@ function renderPanel(force){
       ${TIERS.map((T,i)=>`<div class="row"><span class="l">${T.n}</span><span class="v">${fmt.format(G.popT[i]||0)}</span></div>`).join('')}</div>`;
   }
   if (sel.kind==='b'){ const b=G.byId.get(sel.id);
-    if (b && canLevel(b.t) && !(b.build<1)){ const L=lvlOf(b), to=L+1;
-      let u=`<div class="sec"><h4>Ausbau · Stufe ${LVL_N[L-1]} von III</h4>`;
-      if (L>=3) u+=`<p class="note">Höchste Stufe erreicht.</p>`;
-      else { const cost=upgCost(b,to), req=lvlReqOk(to), miss=missing(cost,b.isl);
-        u+=`<p class="note">Stufe ${LVL_N[to-1]}: ${lvlEffect(b,to)}.</p><div class="row">${costHTML(cost,b.isl)}<button class="btn ${req&&!miss?'primary':''}" type="button" data-act="upgrade" ${req&&!miss?'':'disabled'}>Ausbauen</button></div>${req?'':`<p class="note">${unlockText(LVL_REQ[to])} möglich.</p>`}`;
+    if (b && canLevel(b.t) && !(b.build<1)){ const L=lvlOf(b), to=L+1, mx=maxLvl(b.t);
+      let u=`<div class="sec"><h4>Ausbau · Stufe ${LVL_N[L-1]} von ${LVL_N[mx-1]}</h4>`;
+      if (L>=mx) u+=`<p class="note">Höchste Stufe erreicht.</p>`;
+      else { const cost=upgCost(b,to), req=lvlReqOk(b,to), miss=missing(cost,b.isl);
+        u+=`<p class="note">Stufe ${LVL_N[to-1]}: ${lvlEffect(b,to)}.</p><div class="row">${costHTML(cost,b.isl)}<button class="btn ${req&&!miss?'primary':''}" type="button" data-act="upgrade" ${req&&!miss?'':'disabled'}>Ausbauen</button></div>${req?'':`<p class="note">${unlockText(lvlReq(b,to))} möglich.</p>`}`;
         sig+='|'+req+'|'+!!miss; }
       html+=u+'</div>'; sig+='|lvl'+L; } }
   if (!force && sig===panelSig){ updatePanelLive(); return; }
@@ -3677,7 +3755,7 @@ function restore(s){
   for (const [i,v] of s.fish||[]) g.fish[i]=v;
   for (const i of s.roads||[]) g.road[i]=1;
   G=g;
-  for (const [t,x,y,tier,res,on,prog,out,hasIn,bld,fire,sick,shipT,shipType,lvl,upTo] of s.b){ const b={ shipType:shipType||'kogge', lvl:lvl||1, upTo:upTo||null, build:bld==null?1:bld, id:g.nextId++, t, x, y, prog:prog||0, out:out||0, hasIn:!!hasIn, on:!!on, eff:.5, st:'', conn:false, seed:(x*7+y*13)%97, fire:fire||0, sick:sick||0, shipT:shipT==null?null:shipT }; if (t==='haus'){ b.tier=tier; b.res=res; b.happy=.7; b.upT=0; } addBuilding(b); }
+  for (const [t,x,y,tier,res,on,prog,out,hasIn,bld,fire,sick,shipT,shipType,lvl,upTo] of s.b){ const b={ shipType:shipType||'kogge', lvl:Math.min(lvl||1,maxLvl(t)), upTo:upTo&&upTo<=maxLvl(t)?upTo:null, build:bld==null?1:bld, id:g.nextId++, t, x, y, prog:prog||0, out:out||0, hasIn:!!hasIn, on:!!on, eff:.5, st:'', conn:false, seed:(x*7+y*13)%97, fire:t==='haus'?fire||0:0, sick:sick||0, shipT:shipT==null?null:shipT }; if (t==='haus'){ b.tier=tier; b.res=res; b.happy=.7; b.upT=0; } addBuilding(b); }
   if (s.ships){
     g.ships=s.ships.map(o=>Object.assign(makeShip(o.id,o.name,o.x,o.y,o.cap,o.type||'kogge'),{ cargo:Object.assign(emptyGoods(),o.cargo), route:o.route||null, da:o.a||0, ang:o.a||0 }));
     g.nextShip=Math.max(0,...g.ships.map(o=>o.id))+1;
