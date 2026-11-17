@@ -326,7 +326,7 @@ const B = {
   kathedrale:{n:'Kathedrale', s:2, cost:{gold:6000, werkzeug:20, stein:40, ziegel:60}, up:50, unlock:{t:[4,100]}, desc:'Ein Prachtbau für deine Kolonie. Erhöht alle Steuereinnahmen um 10 %.'},
   feuerwehr:{n:'Feuerwehr', s:1, cost:{gold:300, holz:5, werkzeug:2}, up:8, radius:9, svc:'feuerwehr', unlock:{pop:60}, desc:'Löscht Brände im Umkreis von 9 Feldern, bevor Wohnhäuser abbrennen, und senkt die Brandgefahr dort. Brände gibt es erst, wenn die Feuerwehr gebaut werden kann.'},
   arzt:{n:'Arzt', s:1, cost:{gold:450, holz:4, werkzeug:2, ziegel:4}, up:12, radius:9, svc:'arzt', unlock:{t:[2,20]}, desc:'Heilt Seuchen im Umkreis von 9 Feldern schnell und verhindert, dass sie sich ausbreiten. Seuchen gibt es erst, wenn der Arzt gebaut werden kann.'},
-  werft:{n:'Werft', s:2, cost:{gold:600, holz:12, werkzeug:4}, up:10, unlock:{t:[1,30]}, desc:'Baut Handelsschiffe für Routen zwischen deinen Inseln. Muss direkt am Wasser stehen. Ein Schiff kostet 1.200 Gold, 30 Holz, 10 Stoff und 8 Werkzeug.'},
+  werft:{n:'Werft', s:3, cost:{gold:600, holz:12, werkzeug:4}, up:10, unlock:{t:[1,30]}, desc:'Baut Handelsschiffe für Routen zwischen deinen Inseln. Belegt 3 × 3 Felder und muss direkt am Wasser stehen. Ein Schiff kostet 1.200 Gold, 30 Holz, 10 Stoff und 8 Werkzeug.'},
   foerster:{n:'Förster', s:1, cost:{gold:60, holz:3}, up:3, unlock:{pop:15}, desc:'Pflanzt alle 12 Sekunden einen Baum auf freiem Grasland im Umkreis von 3 Feldern. Junge Bäume brauchen etwa anderthalb Minuten, bis man sie fällen kann.'},
   holzfaeller:{n:'Holzfäller', s:1, cost:{gold:50, holz:2}, up:3, out:'holz', time:12, desc:'Fällt Bäume im Umkreis von 3 Feldern. Mit 8 Bäumen in Reichweite arbeitet er voll. Der Wald wird dabei lichter, ein Förster pflanzt nach.'},
   fischer:{n:'Fischerhütte', s:1, cost:{gold:80, holz:3}, up:4, out:'fisch', time:10, desc:'Muss direkt am Wasser stehen. Fisch ist das Grundnahrungsmittel. Zu viele Fischer am selben Ufer fischen das Wasser leer.'},
@@ -803,6 +803,8 @@ const canLevel = t => !['strasse','haus','kathedrale'].includes(t);
 const bigLvl = t => t==='kontor' || t==='werft';
 const maxLvl = t => bigLvl(t) ? 3 : 2;
 const lvlOf = b => Math.min(b.lvl||1, maxLvl(b.t));
+// footprint of one building: werften from older saves keep their 2x2 size
+const bs = b => b.sz||B[b.t].s;
 const lvlStep = b => (lvlOf(b)-1)*(bigLvl(b.t)?2:1);   // extra radius per level
 function lvlReq(b,to){ if (bigLvl(b.t)) return to===2 ? {t:[2,60]} : {t:[3,120]}; if (b.t==='universitaet') return {t:[4,80]}; return {t:[3,50]}; }
 function lvlReqOk(b,to){ const u=lvlReq(b,to); return atLeast(u.t[0])>=u.t[1]; }
@@ -887,7 +889,7 @@ function recompute(){
   G.cnt={}; G.hubIds=new Set(); G.caps={};
   for (const b of G.buildings){
     G.cnt[b.t]=(G.cnt[b.t]||0)+1;
-    const d=B[b.t], cx=b.x+d.s/2, cy=b.y+d.s/2;
+    const d=B[b.t], cx=b.x+bs(b)/2, cy=b.y+bs(b)/2;
     if (d.hub) G.hubIds.add(b.id);
     const L=lvlOf(b)-1;
     if (d.influence){ const id=b.isl; circle(cx,cy,d.influence+L*(b.t==='kontor'?3:1),i=>{ if (M.isl[i]===id) own[i]=1; }); }
@@ -896,14 +898,14 @@ function recompute(){
     if (add) G.caps[b.isl]=(G.caps[b.isl]||30)+add;
   }
   const q=[];
-  for (const b of G.buildings) if (B[b.t].hub) border(b.x,b.y,B[b.t].s,i=>{ if (G.road[i]&&!conn[i]){ conn[i]=1; q.push(i); } });
+  for (const b of G.buildings) if (B[b.t].hub) border(b.x,b.y,bs(b),i=>{ if (G.road[i]&&!conn[i]){ conn[i]=1; q.push(i); } });
   while (q.length){ const i=q.pop(), x=i%N, y=(i/N)|0;
     for (const [dx,dy] of D4){ const nx=x+dx, ny=y+dy; if(nx<0||ny<0||nx>=N||ny>=N) continue; const j=ny*N+nx; if (G.road[j]&&!conn[j]){ conn[j]=1; q.push(j); } } }
   G.connRoads=[]; for (let i=0;i<N*N;i++) if (conn[i]) G.connRoads.push(i);
   for (const b of G.buildings){
     const d=B[b.t];
     if (d.hub) b.conn=true;
-    else { let c=false; border(b.x,b.y,d.s,i=>{ if (conn[i] || G.hubIds.has(G.occ[i])) c=true; }); b.conn=c; }
+    else { let c=false; border(b.x,b.y,bs(b),i=>{ if (conn[i] || G.hubIds.has(G.occ[i])) c=true; }); b.conn=c; }
   }
   recountTrees();
   // overlay paths
@@ -1014,11 +1016,11 @@ function place(type,x,y,quiet){
 function addBuilding(b){
   b.isl = G.map.isl[b.y*N+b.x];
   G.buildings.push(b); G.byId.set(b.id,b);
-  const s=B[b.t].s; for (let yy=b.y; yy<b.y+s; yy++) for (let xx=b.x; xx<b.x+s; xx++) G.occ[yy*N+xx]=b.id;
+  const s=bs(b); for (let yy=b.y; yy<b.y+s; yy++) for (let xx=b.x; xx<b.x+s; xx++) G.occ[yy*N+xx]=b.id;
 }
 function removeBuilding(b){
   const d=B[b.t];
-  for (let yy=b.y; yy<b.y+d.s; yy++) for (let xx=b.x; xx<b.x+d.s; xx++) G.occ[yy*N+xx]=0;
+  for (let yy=b.y; yy<b.y+bs(b); yy++) for (let xx=b.x; xx<b.x+bs(b); xx++) G.occ[yy*N+xx]=0;
   G.buildings.splice(G.buildings.indexOf(b),1); G.byId.delete(b.id);
   if (sel.kind==='b' && sel.id===b.id) select(null);
   G.dirty=true;
@@ -1284,7 +1286,9 @@ function werftTick(dt){
   for (const b of G.buildings){ if (b.t!=='werft' || b.shipT==null || b.build<1 || b.fire>0) continue;
     b.shipT+=dt; b.st='Baut ein Schiff';
     if (b.shipT>=shipTime(b)){ b.shipT=null; b.st='Bereit'; const ST=SHIPTYPES[b.shipType]||SHIPTYPES.kogge;
-      let w=null; border(b.x,b.y,2,i=>{ if (w==null && nav(i)) w=i; }); if (w==null) continue;
+      let w=null; const wd=werftDir(b), sz=bs(b); border(b.x,b.y,sz,i=>{ const x=i%N, y=(i/N)|0, side=x>=b.x+sz?0:y>=b.y+sz?1:x<b.x?2:3; if (nav(i) && (w==null || side===wd)) w=i; });
+      if (w==null) for (let yy=b.y-2; yy<b.y+sz+2 && w==null; yy++) for (let xx=b.x-2; xx<b.x+sz+2; xx++) if (inB(xx,yy) && nav(yy*N+xx)){ w=yy*N+xx; break; }
+      if (w==null) continue;
       const used=new Set(G.ships.map(s=>s.name)), nm=SHIP_NAMES.find(n=>!used.has(n))||('Schiff '+G.nextShip);
       G.ships.push(makeShip(G.nextShip++,nm,w%N+.5,((w/N)|0)+.5,Math.round(ST.cap*(lvlOf(b)>=3?1.2:1)),b.shipType||'kogge'));
       toast(`Die ${ST.n} ${nm} ist vom Stapel gelaufen.`,'good'); }
@@ -1348,7 +1352,7 @@ function eventsTick(dt){
       if (b.t==='haus') b.res=Math.max(1,b.res-dt*.2);
       if (covered && b.fire>8){ b.fire=0; toast('Die Feuerwehr hat einen Brand gelöscht.','good'); continue; }
       if (b.fspread>10){ b.fspread=0;
-        const near=new Set(); border(b.x,b.y,B[b.t].s,j=>{ if (G.occ[j]) near.add(G.occ[j]); });
+        const near=new Set(); border(b.x,b.y,bs(b),j=>{ if (G.occ[j]) near.add(G.occ[j]); });
         for (const id of near){ const o=G.byId.get(id); if (o && Math.random()<(cov.feuerwehr[o.y*N+o.x]?.1:.35)) ignite(o); } }
       if (!covered && b.fire>30){ removeBuilding(b); toast(`${b.t==='haus'?TIERS[b.tier].house:B[b.t].n} auf ${islName(b.isl)} ist abgebrannt. Eine Feuerwehr hätte den Brand gelöscht.`,'warn'); }
     }
@@ -1691,6 +1695,146 @@ function table(c,x,y,umb){ E(c,x+1,y+1,5,1.6,'rgba(0,0,0,.2)'); c.fillStyle='#5a
 function dome(c,x,y,rx,ry,col,mouth){ E(c,x+1.5,y+1,rx*1.1,rx*.35,'rgba(0,0,0,.25)'); c.fillStyle=vgrad(c,y-ry,y,sh(col,1.12),sh(col,.72)); c.beginPath(); c.ellipse(x,y,rx,ry,0,Math.PI,0); c.fill(); E(c,x,y,rx,rx*.3,sh(col,.7));
   c.strokeStyle='rgba(60,30,20,.3)'; c.lineWidth=.5; c.beginPath(); for (const f of [.35,.65]){ c.ellipse(x,y,rx*f+rx*(1-f)*.0+rx*f*.0,ry*f,0,Math.PI,0); } c.stroke();
   if (mouth){ c.fillStyle='#1a1210'; c.beginPath(); c.ellipse(x-rx*.25,y-.4,rx*.28,ry*.35,0,Math.PI,0); c.fill(); E(c,x-rx*.25,y-.8,rx*.2,ry*.16,mouth); } }
+// ---- iso prisms with independent half-lengths: U along the tile x-axis (towards front-right), V along the y-axis (towards front-left)
+function ipt(x,y,u,v){ return [x+u-v, y+(u+v)/2]; }
+function ibox(c,x,y,U,V,h,col,style){
+  const Lp=ipt(x,y,-U,V), Fp=ipt(x,y,U,V), Rp=ipt(x,y,U,-V), Bp=ipt(x,y,-U,-V), up=p=>[p[0],p[1]-h];
+  const FL=(u,v)=>{ const p=lerp2(Lp,Fp,u); return [p[0],p[1]-v]; }, FR=(u,v)=>{ const p=lerp2(Fp,Rp,u); return [p[0],p[1]-v]; };
+  c.fillStyle=vgrad(c,Fp[1]-h,Fp[1],sh(col,1.02),sh(col,.8)); path(c,[Lp,Fp,up(Fp),up(Lp)]); c.fill();
+  c.fillStyle=vgrad(c,Fp[1]-h,Fp[1],sh(col,.78),sh(col,.58)); path(c,[Fp,Rp,up(Rp),up(Fp)]); c.fill();
+  if (style){ detail(c,[Lp,Fp,up(Fp),up(Lp)],FL,h,style); detail(c,[Fp,Rp,up(Rp),up(Fp)],FR,h,style); }
+  P(c,[up(Bp),up(Rp),up(Fp),up(Lp)],sh(col,1.08));
+  c.strokeStyle='rgba(20,14,8,.3)'; c.lineWidth=1; c.beginPath(); ln(c,Lp,Fp); ln(c,Fp,Rp); c.stroke();
+  c.strokeStyle='rgba(255,255,255,.18)'; c.lineWidth=.6; c.beginPath(); ln(c,up(Lp),up(Fp)); ln(c,up(Fp),up(Rp)); ln(c,Fp,up(Fp)); c.stroke();
+  return {FL,FR,Lp,Fp,Rp,Bp};
+}
+// saddle roof whose ridge runs along U (alongU) or along V
+function iroof(c,x,y,U,V,h,rh,roof,wall,alongU=true){
+  const o=1.06, q=(u,v,z)=>{ const p=ipt(x,y,u,v); return [p[0],p[1]-z]; };
+  if (alongU){
+    const r0=q(-U*o,0,h+rh), r1=q(U*o,0,h+rh);
+    P(c,[q(-U*o,-V*o,h),q(U*o,-V*o,h),r1,r0],sh(roof,.62));
+    P(c,[q(U,V,h),q(U,-V,h),q(U,0,h+rh*.96)],sh(wall,.7));
+    const g=c.createLinearGradient(...q(0,V*o,h),...q(0,0,h+rh)); g.addColorStop(0,sh(roof,.85)); g.addColorStop(1,sh(roof,1.15)); c.fillStyle=g; path(c,[q(-U*o,V*o,h),q(U*o,V*o,h),r1,r0]); c.fill();
+    c.strokeStyle='rgba(20,10,5,.2)'; c.lineWidth=.5; c.beginPath(); for (let t=.06;t<1;t+=.06){ ln(c,q(-U*o+2*U*o*t,V*o,h),q(-U*o+2*U*o*t,0,h+rh)); } c.stroke();
+    c.strokeStyle=sh(roof,.5); c.lineWidth=1.2; c.beginPath(); ln(c,r0,r1); c.stroke();
+  } else {
+    const r0=q(0,-V*o,h+rh), r1=q(0,V*o,h+rh);
+    P(c,[q(-U*o,-V*o,h),q(-U*o,V*o,h),r1,r0],sh(roof,.95));
+    P(c,[q(-U,V,h),q(U,V,h),q(0,V,h+rh*.96)],sh(wall,.95));
+    const g=c.createLinearGradient(...q(U*o,0,h),...q(0,0,h+rh)); g.addColorStop(0,sh(roof,.55)); g.addColorStop(1,sh(roof,.78)); c.fillStyle=g; path(c,[q(U*o,-V*o,h),q(U*o,V*o,h),r1,r0]); c.fill();
+    c.strokeStyle='rgba(20,10,5,.2)'; c.lineWidth=.5; c.beginPath(); for (let t=.06;t<1;t+=.06){ ln(c,q(U*o,-V*o+2*V*o*t,h),q(0,-V*o+2*V*o*t,h+rh)); } c.stroke();
+    c.strokeStyle=sh(roof,.45); c.lineWidth=1.2; c.beginPath(); ln(c,r0,r1); c.stroke();
+  }
+}
+// ship hull with its keel from A to Z (screen points); perp points to the side that faces the viewer; plank 0 = bare ribs .. 1 = finished
+function hullV(c,A,Z,W,H,plank,o={}){
+  const n=14, pv=o.perp||[-1,.5], pt=t=>{ const p=lerp2(A,Z,t), w=W*Math.sin(Math.PI*(.05+.9*t))**.55, h=H*Math.sin(Math.PI*(.04+.92*t))**.3+2+H*.35*Math.abs(t-.45)**2*2; return [p,w,h]; };
+  const side=[], deck=[], keel=[];
+  for (let k=0;k<=n;k++){ const [p,w,h]=pt(k/n); side.push([p[0]+pv[0]*w,p[1]+pv[1]*w-h]); deck.push([p[0]-pv[0]*w,p[1]-pv[1]*w-h]); keel.push([p[0],p[1]+1]); }
+  c.strokeStyle='#4a3020'; c.lineWidth=2.2; c.beginPath(); ln(c,keel[0],keel[n]); c.stroke();
+  if (plank<1){
+    c.strokeStyle='#8a6038'; c.lineWidth=1.2; c.beginPath(); for (let k=1;k<n;k++){ c.moveTo(...side[k]); c.quadraticCurveTo(keel[k][0],keel[k][1]+3,deck[k][0],deck[k][1]); } c.stroke();
+    c.strokeStyle='#a77a45'; c.lineWidth=1; c.beginPath(); for (const L of [side,deck]){ c.moveTo(...L[1]); for (let k=2;k<n;k++) c.lineTo(...L[k]); } c.stroke();
+    if (plank>0){ const m=Math.max(1,Math.floor(n*plank)); c.fillStyle=vgrad(c,A[1]-H,Z[1]+4,'#a8743f','#6a4424'); c.beginPath(); c.moveTo(...keel[0]); for (let k=0;k<=m;k++) c.lineTo(...lerp2(side[k],keel[k],.08)); for (let k=m;k>=0;k--) c.lineTo(...keel[k]); c.fill();
+      c.strokeStyle='rgba(50,30,15,.4)'; c.lineWidth=.5; c.beginPath(); for (const f of [.3,.5,.7]){ c.moveTo(...lerp2(side[0],keel[0],f)); for (let k=1;k<=m;k++) c.lineTo(...lerp2(side[k],keel[k],f)); } c.stroke();
+      c.strokeStyle='#5a3c22'; c.lineWidth=1.3; c.beginPath(); for (let k=m;k<n;k++){ c.moveTo(...side[k]); c.quadraticCurveTo(keel[k][0],keel[k][1]+3,deck[k][0],deck[k][1]); } c.stroke(); }
+  } else {
+    c.fillStyle='#c9a46a'; path(c,[...side,...deck.slice().reverse()]); c.fill();
+    c.strokeStyle='rgba(90,60,30,.4)'; c.lineWidth=.5; c.beginPath(); for (let k=1;k<n;k++) ln(c,side[k],deck[k]); c.stroke();
+    c.fillStyle=vgrad(c,A[1]-H,Z[1]+4,o.col||'#7a4a2a',sh(o.col||'#7a4a2a',.55)); path(c,[...side,...keel.slice().reverse()]); c.fill();
+    c.strokeStyle=o.stripe||'#e3a948'; c.lineWidth=1.1; c.beginPath(); c.moveTo(side[0][0],side[0][1]+1.6); for (const q of side) c.lineTo(q[0],q[1]+1.6); c.stroke();
+    c.strokeStyle='rgba(30,20,10,.35)'; c.lineWidth=.5; c.beginPath(); for (const f of [.45,.65,.82]){ c.moveTo(...lerp2(side[1],keel[1],f)); for (let k=2;k<n;k++) c.lineTo(...lerp2(side[k],keel[k],f)); } c.stroke();
+    for (let k=3;k<n-2;k+=2){ const q=lerp2(side[k],keel[k],.28); P(c,[[q[0]-1.1,q[1]-1],[q[0]+1.1,q[1]-.4],[q[0]+1.1,q[1]+1.1],[q[0]-1.1,q[1]+.5]],'#1e1610'); }
+  }
+}
+function coil(c,x,y){ E(c,x+1,y+.6,4,1.4,'rgba(0,0,0,.22)'); for (let r=3.6;r>.6;r-=.9){ c.strokeStyle=r>2.5?'#c8a46a':'#b08a52'; c.lineWidth=.9; c.beginPath(); c.ellipse(x,y-1-(3.6-r)*.5,r,r*.45,0,0,7); c.stroke(); } }
+function convexHull(pts){ const p=pts.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]), cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]); const lo=[], hi=[];
+  for (const q of p){ while (lo.length>=2 && cr(lo[lo.length-2],lo[lo.length-1],q)<=0) lo.pop(); lo.push(q); }
+  for (const q of p.slice().reverse()){ while (hi.length>=2 && cr(hi[hi.length-2],hi[hi.length-1],q)<=0) hi.pop(); hi.push(q); }
+  return lo.slice(0,-1).concat(hi.slice(0,-1)); }
+
+// ---- the 3x3 shipyard: a large hall with an open gable towards the water, the slipway runs out of it
+// dir: side of the water 0 = +x (front right), 1 = +y (front left), 2 = -x (back left), 3 = -y (back right)
+const W3 = { hall:[-10,-10], U:28, V:18, H:[34,38,40], rh:22 };
+function wrot(dir,u,v){ return dir===0?[u,v]:dir===1?[-v,u]:dir===2?[-u,-v]:[v,-u]; }
+function werft3Geo(dir,lvl,cx,cy){
+  const [hu,hv]=wrot(dir,...W3.hall), swap=dir%2===1, U=swap?W3.V:W3.U, V=swap?W3.U:W3.V, H=W3.H[lvl-1], P0=ipt(cx,cy,hu,hv);
+  const corners=[]; for (const su of [-1,1]) for (const sv of [-1,1]) for (const z of [0,H]){ const p=ipt(P0[0],P0[1],su*U*1.07,sv*V*1.07); corners.push([p[0],p[1]-z]); }
+  for (const s of [-1,1]){ const p=swap?ipt(P0[0],P0[1],0,s*V*1.07):ipt(P0[0],P0[1],s*U*1.07,0); corners.push([p[0],p[1]-H-W3.rh]); }
+  // opening on the local +u face: only visible for dir 0 and 1
+  const loc=(u,v,z)=>{ const [a,b]=wrot(dir,u,v), p=ipt(cx,cy,a,b); return [p[0],p[1]-z]; }, fu=W3.hall[0]+W3.U, fv=W3.hall[1];
+  const open = dir<2 ? [loc(fu,fv-14,0),loc(fu,fv+14,0),loc(fu,fv+14,H-9),loc(fu,fv,H-1),loc(fu,fv-14,H-9)] : null;
+  const k0=loc(-22,-10,0), k1=loc(46,-10,0);
+  return { P0,U,V,H,swap, sil:convexHull(corners), open, k0, k1, perp:dir%2===0?[-1,.5]:[1,.5], loc };
+}
+function drawWerft3(c,cx,cy,lvl,dir){
+  lvl=lvl||1; const g=werft3Geo(dir,lvl,cx,cy), L=g.loc, R=(u,v)=>{ const [a,b]=wrot(dir,u,v); return ipt(cx,cy,a,b); };
+  plaza(c,cx,cy,90,45,lvl>=3?'#bdb29a':'#b39c72',29);
+  // slipway from the hall to the water edge (stone edged at level III)
+  { const a0=R(0,-17), a1=R(50,-17), b0=R(0,-3), b1=R(50,-3);
+    if (lvl>=3){ P(c,[R(-2,-20),R(50,-20),R(50,0),R(-2,0)],'#9a958a'); P(c,[R(0,-18),R(50,-18),R(50,-2),R(0,-2)],'#7d7468'); }
+    c.strokeStyle='#6e4f2c'; c.lineWidth=2.4; c.beginPath(); ln(c,a0,a1); ln(c,b0,b1); c.stroke();
+    c.strokeStyle='rgba(60,40,20,.55)'; c.lineWidth=1; c.beginPath(); for (let k=0;k<=10;k++){ ln(c,lerp2(a0,a1,k/10),lerp2(b0,b1,k/10)); } c.stroke(); }
+  // objects sorted back to front
+  const items=[];
+  const at=(u,v,f)=>{ const [a,b]=wrot(dir,u,v); items.push([a+b,f,ipt(cx,cy,a,b)]); };
+  at(...W3.hall,(c,p)=>{
+    softShadow(c,p[0]+6,p[1]+4,52,22,.4);
+    const wallCol=lvl>=3?'#d6ccb6':'#7a5638', style=lvl>=3?'stone':'plank';
+    let b;
+    if (lvl===2){ ibox(c,p[0],p[1],g.U,g.V,9,'#b8a684','stone'); b=ibox(c,p[0],p[1]-9,g.U,g.V,g.H-9,wallCol,style); }
+    else b=ibox(c,p[0],p[1],g.U,g.V,g.H,wallCol,style);
+    // windows on the visible long side, and on the side face
+    const long = dir===0||dir===2 ? b.FL : b.FR, sideF = dir===0||dir===2 ? b.FR : b.FL;
+    for (const u of [.1,.28,.46,.64,.82]) win(c,long,u,g.H-14,.07,5,{frame:lvl>=3?'#efe7d4':'#5a3c22'});
+    if (dir>=2) for (const u of [.3,.6]) win(c,sideF,u,g.H-14,.1,5,{frame:lvl>=3?'#efe7d4':'#5a3c22'});
+    if (g.open){ P(c,g.open,'#1e1610'); c.strokeStyle=lvl>=3?'#c9c0ad':'#4a3424'; c.lineWidth=1.6; c.beginPath(); for (let i=0;i<g.open.length;i++) ln(c,g.open[i],g.open[(i+1)%g.open.length]); c.stroke(); }
+    else { const d=sideF; P(c,[d(.3,0),d(.7,0),d(.7,12),d(.3,12)],'#3e2818'); }
+    iroof(c,p[0],p[1],g.U,g.V,g.H,W3.rh,lvl>=3?'#3d5a7e':'#4a3a2a',wallCol,!g.swap);
+    if (lvl>=3){ const t=[p[0],p[1]-g.H-W3.rh+4]; box(c,t[0],t[1],4,2,9,'#e6dcc4','stone'); const TL=face(t[0],t[1],4,2,'L'); const cc=TL(.5,5.5); E(c,cc[0],cc[1],1.8,2,'#f6f0e2'); c.strokeStyle='#2e2a30'; c.lineWidth=.5; c.beginPath(); c.moveTo(cc[0],cc[1]); c.lineTo(cc[0],cc[1]-1.4); c.moveTo(cc[0],cc[1]); c.lineTo(cc[0]+1,cc[1]+.2); c.stroke(); pyramid(c,t[0],t[1],4,2,9,9,'#4f9a86'); E(c,t[0],t[1]-20,1.1,1.1,'#e3a948'); }
+  });
+  // workshop lean-to along the hall
+  at(-12,15+(lvl>=2?1:0),(c,p)=>{ const swap=g.swap, U=swap?7:22, V=swap?22:7, h=lvl>=2?16:13;
+    const b=ibox(c,p[0],p[1],U,V,h,lvl>=3?'#cfc5b0':'#a07a52',lvl>=3?'stone':'plank');
+    const F = swap ? b.FR : b.FL; for (const u of [.15,.45,.75]) win(c,F,u,4,.1,4.5,{lit:true,frame:'#5a3c22'});
+    iroof(c,p[0],p[1],U,V,h,6,lvl>=3?'#3d5a7e':'#5a4a3a',lvl>=3?'#cfc5b0':'#a07a52',!swap); });
+  // tall jib crane at the water side (a second one from level II)
+  const crane=(h,len)=>(c,p)=>{ const x=p[0], y=p[1], tip=[x-len,y-h+10]; E(c,x+2,y+1,5,1.6,'rgba(0,0,0,.25)'); c.strokeStyle='#4a3424'; c.lineWidth=2.6; c.beginPath(); ln(c,[x,y],[x,y-h]); ln(c,[x,y-h+2],tip); ln(c,[x,y-h*.55],lerp2([x,y-h+2],tip,.45)); c.stroke(); c.lineWidth=1.2; c.beginPath(); ln(c,[x-4,y+2],[x,y-8]); ln(c,[x+4,y-2],[x,y-8]); c.stroke(); c.strokeStyle='rgba(40,30,20,.8)'; c.lineWidth=.5; c.beginPath(); ln(c,tip,[tip[0],tip[1]+18]); c.stroke(); crate(c,tip[0],tip[1]+22,2.8); };
+  at(36,14,crane(58,22));
+  if (lvl>=2) at(38,-38,crane(48,18));
+  // timber, rope and a saw pit
+  at(-38,32,(c,p)=>{ for (let k=0;k<3;k++) for (let j=0;j<4-k;j++) logEnd(c,p[0]-6+j*4.6+k*2.3,p[1]-k*4,2.2); });
+  at(-40,8,(c,p)=>{ for (let k=0;k<4;k++) box(c,p[0],p[1]-k*1.3,9,1.6,1.1,['#c49460','#b08050','#d0a070','#b88a58'][k],'plank'); });
+  at(6,36,(c,p)=>{ coil(c,p[0],p[1]); coil(c,p[0]+6,p[1]+2.5); });
+  at(24,32,(c,p)=>{ const x=p[0], y=p[1]; P(c,[[x-10,y],[x,y+5],[x+10,y],[x,y-5]],'#4a3424'); P(c,[[x-8,y],[x,y+4],[x+8,y],[x,y-4]],'#1e1610'); P(c,[[x-12,y-2.6],[x+8,y+7.4],[x+8,y+5.4],[x-12,y-4.6]],'#a0703c'); logEnd(c,x+8,y+6.4,1.4); });
+  at(-22,38,(c,p)=>{ barrel(c,p[0],p[1]); barrel(c,p[0]+4,p[1]+2); barrel(c,p[0]+2,p[1]-2.4); });
+  items.sort((a,b)=>a[0]-b[0]); for (const [,f,p] of items) f(c,p);
+}
+// the ship on the slipway: drawn every frame, clipped so the hall hides what is inside it
+function werft3Ship(c,cx,cy,lvl,dir,plank,t,act){
+  const g=werft3Geo(dir,lvl||1,cx,cy);
+  const draw=()=>hullV(c,g.k0,g.k1,11,20,plank,{perp:g.perp,col:(lvl||1)>=3?'#2f4a6a':'#7a4a2a',stripe:(lvl||1)>=3?'#e3c070':'#e3a948'});
+  const outside=()=>{ c.beginPath(); c.rect(cx-200,cy-220,400,400); c.moveTo(...g.sil[0]); for (const p of g.sil) c.lineTo(...p); c.closePath(); c.clip('evenodd'); };
+  c.save(); outside(); draw(); c.restore();
+  if (g.open){ c.save(); path(c,g.open); c.clip(); draw(); c.fillStyle='rgba(20,14,10,.35)'; path(c,g.open); c.fill(); c.restore(); }
+  // shipwrights at work (hidden where the hall stands in front of them)
+  c.save(); outside();
+  const sw=act?Math.sin(t*9):0, wpos=[[20,4],[2,-26]];
+  for (const [k,[u,v]] of wpos.entries()){ const [a,b]=wrot(dir,u,v), p=ipt(cx,cy,a,b); person(c,p[0],p[1],k?'#7a5a3a':'#4a5a7a',{hat:k?'#5a4a30':'#3a3a3a'}); c.strokeStyle='#3a2a20'; c.lineWidth=.9; c.beginPath(); c.moveTo(p[0]-1,p[1]-6); c.lineTo(p[0]-4,p[1]-8+(k?-sw:sw)*2); c.stroke(); }
+  { const [a,b]=wrot(dir,24,32), p=ipt(cx,cy,a,b), s2=act?Math.sin(t*4):0; person(c,p[0]-12,p[1]-1.2,'#7a5a3a',{hat:'#5a4a30'}); c.strokeStyle='#8a8a90'; c.lineWidth=.9; c.beginPath(); ln(c,[p[0]-9,p[1]-8+s2*2.4],[p[0]-5,p[1]+3+s2*2.4]); c.stroke(); }
+  c.restore();
+}
+// water side of a 3x3 shipyard at x,y: the side with the most navigable tiles next to it
+function werftDirAt(x,y,sz=3){
+  const cnt=[0,0,0,0];
+  for (let k=-1;k<=sz;k++) for (const dep of [0,1]){ const sides=[[x+sz+dep,y+k],[x+k,y+sz+dep],[x-1-dep,y+k],[x+k,y-1-dep]]; sides.forEach(([sx,sy],d)=>{ if (inB(sx,sy) && nav(sy*N+sx)) cnt[d]+=dep?1:2; }); }
+  let best=0; for (let d=1;d<4;d++) if (cnt[d]>cnt[best] || (cnt[d]===cnt[best] && d<2 && best>=2)) best=d; return best;
+}
+function werftDir(b){ if (b._wd==null) b._wd=werftDirAt(b.x,b.y,bs(b)); return b._wd; }
+function werft3Sprite(lvl,dir){ return sprite('w3|'+lvl+'|'+dir,220,200,140,c=>drawWerft3(c,0,0,lvl,dir)); }
+function bSpriteOf(b,v,stg){ if (b.t==='werft' && bs(b)===3) return werft3Sprite(lvlOf(b),werftDir(b)); return bSprite(b.t,b.tier||0,v,stg,lvlOf(b)); }
+
 function drawStatic(c,type,cx,cy,o){
   const sd=o.seed||0;
   switch(type){
@@ -2439,7 +2583,7 @@ function drawAnim(c,type,cx,cy,o){
   case 'sandgrube': { const sw=act?Math.sin(t*3.2):0; person(c,cx+10,cy+8,'#8a7a5a',{hat:'#e0c890'}); c.strokeStyle='#5a3c22'; c.lineWidth=.8; c.beginPath(); ln(c,[cx+11.4,cy+1.4],[cx+14+sw*1.6,cy+5.4-sw]); c.stroke(); E(c,cx+14.4+sw*1.6,cy+5.8-sw,1.2,.6,'#d8c08a'); break; }
   case 'faerberei': if (act) for (const [k,vx,vy] of [[0,cx+12,cy+3],[1,cx+18,cy],[2,cx+6,cy+7]]) for (let j=0;j<3;j++){ const p=((t*.35+j/3+k*.21)%1); E(c,vx+Math.sin(t+j+k)*1.2+p*2,vy-p*12,1.4+p*2.6,1.1+p*2,`rgba(240,240,236,${(.4*(1-p)).toFixed(3)})`); } break;
   case 'tischlerei': { const sw=act?Math.sin(t*6)*1.6:0; person(c,cx+12,cy+5.4,'#7a5a3a',{hat:'#5a4a30'}); c.strokeStyle='#8a8a90'; c.lineWidth=1; c.beginPath(); ln(c,[cx+13+sw,cy-1+sw*.5],[cx+18+sw,cy+1.5+sw*.5]); c.stroke(); break; }
-  case 'werft': { const sw=act?Math.sin(t*4):0, x=cx-4, y=cy+19; person(c,x-8,y-1.2,'#7a5a3a',{hat:'#5a4a30'}); c.strokeStyle='#8a8a90'; c.lineWidth=.9; c.beginPath(); ln(c,[x-5,y-8+sw*2.4],[x-1,y+3+sw*2.4]); c.stroke();
+  case 'werft': { if (o.sz===3){ werft3Ship(c,cx,cy,o.lvl||1,o.wd||0,o.prog>=0?o.prog:1,t,act); break; } const sw=act?Math.sin(t*4):0, x=cx-4, y=cy+19; person(c,x-8,y-1.2,'#7a5a3a',{hat:'#5a4a30'}); c.strokeStyle='#8a8a90'; c.lineWidth=.9; c.beginPath(); ln(c,[x-5,y-8+sw*2.4],[x-1,y+3+sw*2.4]); c.stroke();
       if ((o.lvl||1)>=2){ const hx=cx+20, hy=cy-1, hs=act?Math.sin(t*9):0; person(c,hx,hy,'#4a5a7a',{hat:'#3a3a3a'}); c.strokeStyle='#3a2a20'; c.lineWidth=.9; c.beginPath(); c.moveTo(hx-1,hy-6); c.lineTo(hx-4,hy-8+hs*2); c.stroke(); }
       if (o.prog>=0){ const p=o.prog, k0=[cx-2,cy-10], k1=[cx+22,cy+2];
       c.strokeStyle='#5a3a22'; c.lineWidth=1.6; c.beginPath(); ln(c,k0,lerp2(k0,k1,Math.min(1,.3+p))); c.stroke();
@@ -2957,7 +3101,7 @@ let carriers=[];
 function carrierPath(b){
   if (b._cpv===G.rv) return b._cp;
   const d=B[b.t], prev=new Map(), q=[]; let path=null;
-  border(b.x,b.y,d.s,i=>{ if (G.road[i] && conn[i] && !prev.has(i)){ prev.set(i,-1); q.push(i); } });
+  border(b.x,b.y,bs(b),i=>{ if (G.road[i] && conn[i] && !prev.has(i)){ prev.set(i,-1); q.push(i); } });
   const nearHub=i=>{ const x=i%N, y=(i/N)|0; return D4.some(([dx,dy])=>inB(x+dx,y+dy) && G.hubIds.has(G.occ[(y+dy)*N+x+dx])); };
   for (let h=0;h<q.length;h++){ const i=q[h];
     if (nearHub(i)){ path=[]; for (let j=i;j!==-1;j=prev.get(j)) path.push(j); path.reverse(); break; }
@@ -3087,13 +3231,13 @@ function drawDecor(c,[x,y,kind],t){
     bush(c,X,Y-3,2.2,'#4e8a3a'); for (let k=0;k<4;k++) E(c,X-1.6+k*1.1,Y-5.4+(k%2)*.8,.7,.7,['#e46a5a','#f2d36b','#e8e0f0','#c87ad0'][(x+y+k)%4]); }
 }
 // construction sites: the building grows out of a scaffold
-const buildTime = t => t==='haus'?4 : t==='kathedrale'?40 : t==='theater'?25 : B[t].s===2?12 : 8;
+const buildTime = t => t==='haus'?4 : t==='kathedrale'?40 : t==='theater'?25 : B[t].s===3?20 : B[t].s===2?12 : 8;
 function drawConstruction(c,b,cx,cy,at){
-  const d=B[b.t], s=d.s, f=b.build, v=b.t==='haus'?b.seed%12:b.seed%3, sp=bSprite(b.t,b.tier||0,v,0,lvlOf(b));
+  const d=B[b.t], s=bs(b), f=b.build, v=b.t==='haus'?b.seed%12:b.seed%3, sp=bSpriteOf(b,v,0);
   footprintFill(b.x,b.y,s,'rgba(120,90,55,.55)');
   const top=cy-sp.ay, bot=top+sp.h, cut=bot-(sp.h-(sp.h-sp.ay)*.2)*(.1+.9*f);
   c.save(); c.beginPath(); c.rect(cx-sp.w/2,cut,sp.w,bot-cut); c.clip(); c.globalAlpha=.5+.5*f; blit(sp,cx,cy); c.restore();
-  const a=HW*s*.62, bb=HH*s*.62, Hs=8+(s===2?34:22)*f;
+  const a=HW*s*.62, bb=HH*s*.62, Hs=8+(s>=2?34+(s-2)*10:22)*f;
   const corners=[[cx-a,cy],[cx,cy+bb],[cx+a,cy],[cx,cy-bb]];
   c.strokeStyle='#8a6a44'; c.lineWidth=1.2; c.beginPath();
   for (const [x,y] of corners){ c.moveTo(x,y); c.lineTo(x,y-Hs); }
@@ -3227,14 +3371,14 @@ function drawDog(c,x,y,dir,ph,col){
 
 // pennants show the building level
 function drawLevelFlags(c,b,cx,cy,t){
-  const s=B[b.t].s, n=lvlOf(b)-1, x0=cx, y0=cy-HH*s+3, h=s===2?58:38;
-  for (let k=0;k<n;k++){ const x=x0+(k?6:0)*(s===2?1.4:1), y=y0+(k?3:0), w=Math.sin(t*3+k+b.id)*1.4;
+  const s=bs(b), n=lvlOf(b)-1, x0=cx, y0=cy-HH*s+3, h=s===3?60:s===2?58:38;
+  for (let k=0;k<n;k++){ const x=x0+(k?6:0)*(s>=2?1.4:1), y=y0+(k?3:0), w=Math.sin(t*3+k+b.id)*1.4;
     c.strokeStyle='#3a2818'; c.lineWidth=1.2; c.beginPath(); c.moveTo(x,y); c.lineTo(x,y-h); c.stroke();
     c.fillStyle=n===2?'#e3a948':'#3f6aa8'; c.beginPath(); c.moveTo(x,y-h); c.quadraticCurveTo(x+5,y-h+1+w,x+10,y-h+3+w); c.lineTo(x,y-h+6); c.closePath(); c.fill(); }
 }
 // flames on a burning building, firefighters when a fire station is close
 function drawFire(c,b,cx,cy,t){
-  const s=B[b.t].s, w=s===2?26:12, covered=cov.feuerwehr[b.y*N+b.x];
+  const s=Math.min(2,bs(b)), w=s===2?26:12, covered=cov.feuerwehr[b.y*N+b.x];
   smoke(c,cx,cy-(s===2?40:26),t*1.3,true,.6); smoke(c,cx+w*.5,cy-(s===2?36:22),t*1.1+.5,true,.45);
   for (let k=0;k<5;k++){ const fx=cx+(k-2)*w*.35, fy=cy-(s===2?12:6)-Math.abs(k-2)*1.5, f=.8+.35*Math.sin(t*11+k*2.3), hgt=(s===2?18:12)*f;
     const g=c.createLinearGradient(0,fy,0,fy-hgt); g.addColorStop(0,'rgba(255,90,30,.95)'); g.addColorStop(.5,'rgba(255,170,50,.9)'); g.addColorStop(1,'rgba(255,240,150,0)');
@@ -3299,7 +3443,7 @@ function render(rt){
   RT=t;
   for (const k of G.buildings) if (k.t==='kontor') drawJetty(ctx,k);
   if (z>.5){ updateJumps(t,wx0,wx1,wy0,wy1); drawJumps(ctx,t); }
-  if (sel.kind==='b'){ const b=G.byId.get(sel.id); if (b){ const d=B[b.t]; footprintStroke(b.x,b.y,d.s,'#e3a948'); if (d.radius) radiusEll(b.x,b.y,d.s,d.radius,'rgba(227,169,72,.9)'); if (b.t==='holzfaeller') radiusEll(b.x,b.y,1,3.3,'rgba(160,220,140,.9)'); } }
+  if (sel.kind==='b'){ const b=G.byId.get(sel.id); if (b){ const d=B[b.t]; footprintStroke(b.x,b.y,bs(b),'#e3a948'); if (d.radius) radiusEll(b.x,b.y,bs(b),d.radius,'rgba(227,169,72,.9)'); if (b.t==='holzfaeller') radiusEll(b.x,b.y,1,3.3,'rgba(160,220,140,.9)'); } }
   if (sel.kind==='ship'){ const s=selShip()||G.ships[0]; ctx.strokeStyle='rgba(227,169,72,.9)'; ctx.lineWidth=2; ctx.beginPath(); ctx.ellipse(isoX(s.x,s.y),isoY(s.x,s.y)+4,32,16,0,0,Math.PI*2); ctx.stroke();
     if (s.path.length){ const [ex,ey]=s.path[s.path.length-1]; ctx.beginPath(); ctx.ellipse(isoX(ex,ey),isoY(ex,ey),12,6,0,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([4,6]); ctx.beginPath(); ctx.moveTo(isoX(s.x,s.y),isoY(s.x,s.y)); for (const [x,y] of s.path) ctx.lineTo(isoX(x,y),isoY(x,y)); ctx.stroke(); ctx.setLineDash([]); } }
   // objects, back to front
@@ -3314,7 +3458,7 @@ function render(rt){
     if (M.T[i]===5) objs.push([x+y+1,0,x,y]);
     else if (M.tree[i] && !G.occ[i] && !G.road[i]) objs.push([x+y+1,1,x,y]);
   }
-  for (const b of G.buildings){ const s=B[b.t].s, sx=isoX(b.x,b.y), sy=isoY(b.x,b.y); if (sx<wx0-90||sx>wx1+90||sy<wy0-30||sy>wy1+130) continue; objs.push([b.x+b.y+s,2,b]); }
+  for (const b of G.buildings){ const s=bs(b), sx=isoX(b.x,b.y), sy=isoY(b.x,b.y); if (sx<wx0-110||sx>wx1+110||sy<wy0-30||sy>wy1+170) continue; objs.push([b.x+b.y+s,2,b]); }
   for (const s of G.ships) objs.push([s.x+s.y,3,s,'player']);
   if (G.trader.st!=='away') objs.push([G.trader.x+G.trader.y,3,G.trader,'trader']);
   for (const k of G.buildings){
@@ -3327,13 +3471,13 @@ function render(rt){
   for (const o of objs){
     if (o[1]===0){ const pc=MT.get(o[3]*N+o[2]); if (pc) ctx.drawImage(pc.cnv,pc.x,pc.y,pc.w,pc.h); }
     else if (o[1]===1) drawTreeS(ctx,o[2],o[3],M.tree[o[3]*N+o[2]]);
-    else if (o[1]===2){ const b=o[2], s=B[b.t].s, cx=isoX(b.x,b.y), cy=isoY(b.x,b.y)+s*HH;
+    else if (o[1]===2){ const b=o[2], s=bs(b), cx=isoX(b.x,b.y), cy=isoY(b.x,b.y)+s*HH;
       const v=b.t==='haus'?b.seed%12:b.seed%3;
       if (b.build<1) drawConstruction(ctx,b,cx,cy,at);
       else { const d=B[b.t], stg=FARMS.has(b.t)?Math.min(3,Math.floor((b.prog/d.time)*4)):0;
-        blit(bSprite(b.t,b.tier||0,v,stg,lvlOf(b)),cx,cy);
-        if (lvlOf(b)>1 && z>.45) drawLevelFlags(ctx,b,cx,cy,at);
-        drawAnim(ctx,b.t,cx,cy,{tier:b.tier,lvl:lvlOf(b),active:b.active&&G.speed>0,t:at,seed:v,detail:z>.6,prog:b.shipT!=null?b.shipT/shipTime(b):-1}); }
+        blit(bSpriteOf(b,v,stg),cx,cy);
+        if (lvlOf(b)>1 && z>.45 && bs(b)<3) drawLevelFlags(ctx,b,cx,cy,at);
+        drawAnim(ctx,b.t,cx,cy,{tier:b.tier,lvl:lvlOf(b),sz:bs(b),wd:b.t==='werft'?werftDir(b):0,active:b.active&&G.speed>0,t:at,seed:v,detail:z>.6,prog:b.shipT!=null?b.shipT/shipTime(b):-1}); }
       if (b.fire>0) drawFire(ctx,b,cx,cy,at); if (b.sick>0) drawSick(ctx,cx,cy,at); }
     else if (o[1]===3) drawShip(ctx,o[2],o[3],t);
     else if (o[1]===4) drawWalker(ctx,o[2]);
@@ -3351,7 +3495,7 @@ function render(rt){
     if (d.out) bad = b.on && b.st && !b.st.startsWith('Arbeitet') && b.st!=='Kasse leer, halbe Kraft';
     else if (b.t==='haus') bad = b.happy<.45;
     if (!bad) continue;
-    const cx=isoX(b.x,b.y), cy=isoY(b.x,b.y)+d.s*HH-(d.s===2?46:36);
+    const cx=isoX(b.x,b.y), cy=isoY(b.x,b.y)+bs(b)*HH-(bs(b)===3?70:bs(b)===2?46:36);
     if (cx<wx0||cx>wx1||cy<wy0||cy>wy1) continue;
     E(ctx,cx,cy+1,7.5,7.5,'rgba(0,0,0,.25)'); E(ctx,cx,cy,7,7,'#e57a62'); ctx.fillStyle='#fff'; ctx.font='700 10px Figtree, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('!',cx,cy+.5);
   }
@@ -3443,14 +3587,14 @@ function drawGhost(at){
     return;
   }
   const {tx,ty}=hover; const s = tool==='abriss'||tool==='strasse'?1:B[tool].s;
-  const x=tx-(s===2?1:0), y=ty-(s===2?1:0);
+  const x=tx-(s>=2?1:0), y=ty-(s>=2?1:0);
   if (tool==='abriss'){ footprintFill(tx,ty,1,'rgba(229,122,98,.5)'); return; }
   const r=canPlace(tool,x,y);
   footprintFill(x,y,s,r.ok?'rgba(134,201,143,.45)':'rgba(229,122,98,.4)');
   if (!r.ok) ghostWhy=r.why;
   if (B[tool].radius) radiusEll(x,y,s,B[tool].radius,'rgba(227,169,72,.8)');
   if (tool==='holzfaeller') radiusEll(x,y,1,3.3,'rgba(160,220,140,.85)');
-  if (tool!=='strasse'){ const cx=isoX(x,y), cy=isoY(x,y)+s*HH; ctx.globalAlpha=r.ok?.88:.45; blit(bSprite(tool,0,0),cx,cy); drawAnim(ctx,tool,cx,cy,{tier:0,t:at,active:true}); ctx.globalAlpha=1; }
+  if (tool!=='strasse'){ const cx=isoX(x,y), cy=isoY(x,y)+s*HH; ctx.globalAlpha=r.ok?.88:.45; if (tool==='werft'){ const wd=werftDirAt(x,y,3); blit(werft3Sprite(1,wd),cx,cy); werft3Ship(ctx,cx,cy,1,wd,1,at,false); } else { blit(bSprite(tool,0,0),cx,cy); drawAnim(ctx,tool,cx,cy,{tier:0,t:at,active:true}); } ctx.globalAlpha=1; }
 }
 
 // ============================================================ minimap
@@ -3470,7 +3614,7 @@ function drawMini(){
   }
   mctx.setTransform(dpr,0,0,dpr,0,0); mctx.clearRect(0,0,MW,MH); mctx.drawImage(miniBase,0,0,MW,MH);
   mctx.fillStyle='#e3a948';
-  for (const b of G.buildings){ const s=B[b.t].s; const [mx,my]=miniXY(b.x+s/2,b.y+s/2); mctx.fillRect(mx-1,my-1,2.4,2.4); }
+  for (const b of G.buildings){ const s=bs(b); const [mx,my]=miniXY(b.x+s/2,b.y+s/2); mctx.fillRect(mx-1,my-1,2.4,2.4); }
   mctx.fillStyle='#fff'; for (const s of G.ships){ const [mx,my]=miniXY(s.x,s.y); mctx.beginPath(); mctx.arc(mx,my,2.4,0,7); mctx.fill(); }
   if (G.trader.st!=='away'){ mctx.fillStyle='#e57a62'; const [mx,my]=miniXY(G.trader.x,G.trader.y); mctx.beginPath(); mctx.arc(mx,my,2.4,0,7); mctx.fill(); }
   mctx.strokeStyle='rgba(255,255,255,.85)'; mctx.lineWidth=1.2; mctx.beginPath();
@@ -3550,7 +3694,7 @@ function clickAt(h){
   if (tool){
     if (tool==='abriss'){ demolishAt(tx,ty); return; }
     if (PAINT.has(tool)){ applyPaint([[tx,ty]]); return; }
-    const s=B[tool].s, x=tx-(s===2?1:0), y=ty-(s===2?1:0);
+    const s=B[tool].s, x=tx-(s>=2?1:0), y=ty-(s>=2?1:0);
     const r=place(tool,x,y);
     if (r.ok && tool==='kontor'){ setTool(null); select({kind:'b',id:G.occ[y*N+x]}); }
     return;
@@ -3665,13 +3809,14 @@ function setTool(k){
 function thumb(cnv,type,w,h){
   const r=Math.min(2,devicePixelRatio||1); cnv.width=w*r; cnv.height=h*r; cnv.style.width=w+'px'; cnv.style.height=h+'px';
   const c=cnv.getContext('2d'); c.setTransform(r,0,0,r,0,0); c.clearRect(0,0,w,h);
-  const s = type==='strasse'||type==='abriss' ? 1 : B[type].s, sc = s===2 ? .4 : .74;
+  const s = type==='strasse'||type==='abriss' ? 1 : B[type].s, sc = s===3 ? .3 : s===2 ? .4 : .74;
   c.translate(w/2,h*.7); c.scale(sc,sc);
   const gcol = type==='tee'?'#a3c05a':'#86b35c';
   P(c,[[0,-HH*s],[HW*s,0],[0,HH*s],[-HW*s,0]],gcol);
   P(c,[[-HW*s,0],[0,HH*s],[0,HH*s+5],[-HW*s,5]],'#a3895a'); P(c,[[0,HH*s],[HW*s,0],[HW*s,5],[0,HH*s+5]],'#8e774c');
   if (type==='strasse'){ c.lineCap='round'; c.strokeStyle='#8f7b55'; c.lineWidth=17; c.beginPath(); c.moveTo(-HW*.5,-HH*.5); c.lineTo(HW*.5,HH*.5); c.stroke(); c.strokeStyle='#d8c69b'; c.lineWidth=13; c.stroke(); }
   else if (type==='abriss'){ c.strokeStyle='#e57a62'; c.lineWidth=5; c.lineCap='round'; c.beginPath(); c.moveTo(-12,-14); c.lineTo(12,6); c.moveTo(12,-14); c.lineTo(-12,6); c.stroke(); }
+  else if (type==='werft'){ drawWerft3(c,0,0,1,0); werft3Ship(c,0,0,1,0,1,1,false); }
   else drawB(c,type,0,0,{tier:type==='haus'?1:0,active:true,t:1,seed:1});
 }
 
@@ -4001,7 +4146,7 @@ function serialize(){
   return { v:3, N, mv:G.map.ver||1, seed:G.seed, t:G.t, gold:G.gold, stores:G.stores, sup:G.sup, founded:G.founded, goal:G.goal, won:G.won, allowUp:G.allowUp,
     edits:[...G.treeEdits], saplings:[...G.saplings].map(([i,g])=>[i,+g.toFixed(2)]), ore, fish,
     roads:[...G.road.keys()].filter(i=>G.road[i]), tierSeen:G.tierSeen, unlocked:[...G.unlocked],
-    b:G.buildings.map(b=>[b.t,b.x,b.y,b.tier||0,+(b.res||0).toFixed(2),b.on?1:0,+b.prog.toFixed(2),b.out,b.hasIn?1:0,+(b.build??1).toFixed(3),+(b.fire||0).toFixed(1),+(b.sick||0).toFixed(1),b.shipT==null?null:+b.shipT.toFixed(1),b.shipType||null,lvlOf(b),b.upTo||null,b.refill==null?null:Math.round(b.refill)]),
+    b:G.buildings.map(b=>[b.t,b.x,b.y,b.tier||0,+(b.res||0).toFixed(2),b.on?1:0,+b.prog.toFixed(2),b.out,b.hasIn?1:0,+(b.build??1).toFixed(3),+(b.fire||0).toFixed(1),+(b.sick||0).toFixed(1),b.shipT==null?null:+b.shipT.toFixed(1),b.shipType||null,lvlOf(b),b.upTo||null,b.refill==null?null:Math.round(b.refill),b.t==='werft'?bs(b):null]),
     ships:G.ships.map(s=>({ id:s.id, name:s.name, x:s.x, y:s.y, a:s.da, cap:s.cap, type:s.type, cargo:s.cargo, route:s.route })),
     techs:[...G.techs], rp:G.rp, taxLv:G.taxLv,
     events:G.events, nextEvent:G.nextEvent, trader:{tm:G.trader.st==='away'?G.trader.tm:120},
@@ -4017,7 +4162,7 @@ function restore(s){
   for (const [i,v] of s.fish||[]) g.fish[i]=v;
   for (const i of s.roads||[]) g.road[i]=1;
   G=g;
-  for (const [t,x,y,tier,res,on,prog,out,hasIn,bld,fire,sick,shipT,shipType,lvl,upTo,refill] of s.b){ const b={ refill:refill??null, shipType:shipType||'kogge', lvl:Math.min(lvl||1,maxLvl(t)), upTo:upTo&&upTo<=maxLvl(t)?upTo:null, build:bld==null?1:bld, id:g.nextId++, t, x, y, prog:prog||0, out:out||0, hasIn:!!hasIn, on:!!on, eff:.5, st:'', conn:false, seed:(x*7+y*13)%97, fire:t==='haus'?fire||0:0, sick:sick||0, shipT:shipT==null?null:shipT }; if (t==='haus'){ b.tier=tier; b.res=res; b.happy=.7; b.upT=0; } addBuilding(b); }
+  for (const [t,x,y,tier,res,on,prog,out,hasIn,bld,fire,sick,shipT,shipType,lvl,upTo,refill,sz] of s.b){ const b={ refill:refill??null, ...(t==='werft'?{sz:sz||2}:{}), shipType:shipType||'kogge', lvl:Math.min(lvl||1,maxLvl(t)), upTo:upTo&&upTo<=maxLvl(t)?upTo:null, build:bld==null?1:bld, id:g.nextId++, t, x, y, prog:prog||0, out:out||0, hasIn:!!hasIn, on:!!on, eff:.5, st:'', conn:false, seed:(x*7+y*13)%97, fire:t==='haus'?fire||0:0, sick:sick||0, shipT:shipT==null?null:shipT }; if (t==='haus'){ b.tier=tier; b.res=res; b.happy=.7; b.upT=0; } addBuilding(b); }
   if (s.ships){
     g.ships=s.ships.map(o=>Object.assign(makeShip(o.id,o.name,o.x,o.y,o.cap,o.type||'kogge'),{ cargo:Object.assign(emptyGoods(),o.cargo), route:o.route||null, da:o.a||0, ang:o.a||0 }));
     g.nextShip=Math.max(0,...g.ships.map(o=>o.id))+1;
@@ -4085,7 +4230,7 @@ function demo(){
   showMenu('start');
 }
 window.claude?.hot?.snapshot?.(()=>({ save: G && !G.demo ? serialize() : null, speed: G ? G.speed : 1 }));
-window.__salzwind = { get G(){ return G; }, moveShip, dockedAt, dockXY, transfer, triggerEvent, ignite, shipPath, recountTrees, reserveOf, fishLevel, select, get N(){ return N; }, get walkers(){ return walkers; }, get coaches(){ return coaches; }, get deer(){ return deer; }, get carriers(){ return carriers; }, render, place, addBuilding, TIERS, step, recompute, setTool, select, startNew, saveGame, loadGame, cam, B };
+window.__salzwind = { werftDirAt, removeB:removeBuilding, get G(){ return G; }, moveShip, dockedAt, dockXY, transfer, triggerEvent, ignite, shipPath, recountTrees, reserveOf, fishLevel, select, get N(){ return N; }, get walkers(){ return walkers; }, get coaches(){ return coaches; }, get deer(){ return deer; }, get carriers(){ return carriers; }, render, place, addBuilding, TIERS, step, recompute, setTool, select, startNew, saveGame, loadGame, cam, B };
 if (window.claude?.hot?.ready) window.claude.hot.ready(start); else start(window.claude?.hot?.data ?? {});
 })();
 </script>
