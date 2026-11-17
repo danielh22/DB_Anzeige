@@ -74,7 +74,7 @@ Im Ordner [`salzwind/`](salzwind/index.html) liegt ein eigenständiges Insel-Auf
 Straßen anbinden und 24 Waren in Produktionsketten herstellen, etwa Wolle → Stoff → Kleidung,
 Holz → Kohle und Erz → Eisen → Werkzeug, Ton → Ziegel, Hopfen → Bier, Trauben → Wein oder Gold → Schmuck.
 Die Bewohner steigen über fünf Stufen von Pionieren bis zu Aristokraten auf. Jede Insel hat ihr eigenes Lager; Schiffe bringen Waren von Hand oder über Handelsrouten zwischen den Inseln,
-eine Werft baut weitere Schiffe. Wälder, Erzadern und Fischgründe sind endlich, Brände, Seuchen, Stürme und
+eine Werft baut weitere Schiffe. Wälder, Erzadern und Fischgründe sind endlich (leere Minen sind nach 10 Minuten wieder voll), Brände, Seuchen, Stürme und
 Missernten fordern Feuerwehr und Arzt. Neue Ketten liefern Glas, Farbstoff, Möbel und Gewürze; Steuern lassen sich pro Stufe einstellen,
 Häuser steigen bei Mangel ab, Routen haben bis zu vier Häfen mit Mengenregeln, die Werft baut drei Schiffstypen
 und eine Universität erforscht Verbesserungen. Kontor und Werft lassen sich in drei Stufen ausbauen, andere Gebäude einmal. Mit GitHub Pages erreichbar unter

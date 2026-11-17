@@ -332,8 +332,8 @@ const B = {
   fischer:{n:'Fischerhütte', s:1, cost:{gold:80, holz:3}, up:4, out:'fisch', time:10, desc:'Muss direkt am Wasser stehen. Fisch ist das Grundnahrungsmittel. Zu viele Fischer am selben Ufer fischen das Wasser leer.'},
   steinbruch:{n:'Steinbruch', s:1, cost:{gold:150, holz:5, werkzeug:2}, up:6, out:'stein', time:16, unlock:{t:[1,20]}, desc:'Muss an einen Berg grenzen.'},
   tongrube:{n:'Tongrube', s:1, cost:{gold:200, holz:4, werkzeug:2}, up:6, out:'ton', time:15, unlock:{t:[2,1]}, desc:'Gräbt Ton am Ufer. Muss direkt am Wasser stehen.'},
-  erzmine:{n:'Erzmine', s:1, cost:{gold:250, holz:6, werkzeug:3}, up:10, out:'erz', time:20, unlock:{t:[1,40]}, desc:'Braucht ein Erzvorkommen im angrenzenden Berg (rötlich gesprenkelt). Die Ader erschöpft sich mit der Zeit und erholt sich nur langsam.'},
-  goldmine:{n:'Goldmine', s:1, cost:{gold:800, holz:8, werkzeug:6, ziegel:6}, up:25, out:'golderz', time:25, unlock:{t:[3,60]}, desc:'Braucht ein Goldvorkommen im angrenzenden Berg (golden funkelnd). Nur wenige Inseln haben eins.'},
+  erzmine:{n:'Erzmine', s:1, cost:{gold:250, holz:6, werkzeug:3}, up:10, out:'erz', time:20, unlock:{t:[1,40]}, desc:'Braucht ein Erzvorkommen im angrenzenden Berg (rötlich gesprenkelt). Ist die Ader erschöpft, ruht die Mine 10 Minuten, danach ist das Vorkommen wieder voll.'},
+  goldmine:{n:'Goldmine', s:1, cost:{gold:800, holz:8, werkzeug:6, ziegel:6}, up:25, out:'golderz', time:25, unlock:{t:[3,60]}, desc:'Braucht ein Goldvorkommen im angrenzenden Berg (golden funkelnd). Nur wenige Inseln haben eins. Ist es erschöpft, ruht die Mine 10 Minuten, danach ist es wieder voll.'},
   schaf:{n:'Schaffarm', s:2, cost:{gold:150, holz:4}, up:6, out:'wolle', time:14, unlock:{pop:40}, desc:'Liefert Wolle für die Weberei.'},
   getreide:{n:'Getreidefarm', s:2, cost:{gold:120, holz:4}, up:5, out:'getreide', time:12, unlock:{t:[1,80]}, desc:'Liefert Getreide für Mühle und Brauerei.'},
   hopfen:{n:'Hopfengarten', s:2, cost:{gold:200, holz:4, werkzeug:1}, up:6, out:'hopfen', time:15, unlock:{t:[2,1]}, desc:'Liefert Hopfen für die Brauerei.'},
@@ -1066,6 +1066,15 @@ function step(dt){
 // adjacent mineral tiles a mine draws from
 function mineTiles(b){ const M=G.map, out=[]; for (let yy=b.y-1; yy<=b.y+1; yy++) for (let xx=b.x-1; xx<=b.x+1; xx++){ if (!inB(xx,yy)) continue; const i=yy*N+xx; if (b.t==='erzmine'?M.ore[i]:M.gold[i]) out.push(i); } return out; }
 const reserveOf = b => mineTiles(b).reduce((a,i)=>a+G.oreRes[i],0);
+// an exhausted mine rests for MINE_REFILL seconds, then its deposit is full again
+const MINE_REFILL=600;
+function mineRefill(b,dt){
+  if (reserveOf(b)>=1){ b.refill=null; return; }
+  if (b.refill==null) b.refill=MINE_REFILL;
+  b.refill-=dt; if (b.refill>0) return;
+  for (const i of mineTiles(b)) G.oreRes[i]=G.map.ore[i]?ORE_MAX:GOLD_MAX;
+  b.refill=null; toast(`${B[b.t].n} auf ${islName(b.isl)}: Das Vorkommen ist wieder voll.`,'good');
+}
 function fishTiles(b){ if (!b._fw){ b._fw=[]; circle(b.x+.5,b.y+.5,4.2,i=>{ if (G.map.T[i]<=2) b._fw.push(i); }); } return b._fw; }
 const fishLevel = b => { const t=fishTiles(b); if (!t.length) return 0; let s=0; for (const i of t) s+=G.fish[i]; return s/t.length; };
 function onCycle(b){
@@ -1076,6 +1085,7 @@ function onCycle(b){
 function produce(b,d,dt,broke){
   let working=false, mult = broke?.5:1, zero='';
   const amt = d.amt||1, st=G.stores[b.isl], cap=capOf(b.isl);
+  if (b.t==='erzmine'||b.t==='goldmine') mineRefill(b,dt);
   if (!b.on) b.st='Angehalten';
   else if (!st) b.st='Kein Kontor auf dieser Insel';
   else if (!b.conn) b.st='Keine Straße zum Kontor';
@@ -1088,7 +1098,7 @@ function produce(b,d,dt,broke){
     mult*=LVL_PROD[lvlOf(b)-1];
     if (d.fert && !G.map.comps[b.isl][d.fert]) mult*=.5;
     if (b.t==='holzfaeller'){ mult *= Math.min(1,(b.trees||0)/8); zero='Kein Wald in der Nähe'; }
-    if (b.t==='erzmine'||b.t==='goldmine'){ if (reserveOf(b)<1){ mult=0; zero='Vorkommen erschöpft'; } }
+    if (b.t==='erzmine'||b.t==='goldmine'){ if (reserveOf(b)<1){ mult=0; zero=`Vorkommen erschöpft, wieder voll in ${Math.max(1,Math.ceil((b.refill??MINE_REFILL)/60))} min`; } }
     if (b.t==='fischer'){ const f=fishLevel(b); mult *= Math.min(1,f*1.25); zero = G.events.some(e=>e.k==='storm') ? 'Sturm: Die Boote bleiben im Hafen' : 'Keine Fische mehr'; }
     if (mult<=0) b.st=zero||'Ruht';
     else if (b.out>=amt*2) b.st='Lager voll';
@@ -1121,8 +1131,6 @@ function natureTick(dt){
     if (c.length){ plantTree(c[Math.floor(Math.random()*c.length)]); b.st='Pflanzt Bäume'; b.active=true; } else { b.st='Kein Platz zum Pflanzen'; b.active=false; } }
   for (let i=0;i<N*N;i++){
     if (G.fish[i]<1 && M.T[i]<=2) G.fish[i]=Math.min(1,G.fish[i]+.016*(1-G.fish[i])*dt+.0004*dt);
-    if (M.ore[i] && G.oreRes[i]<ORE_MAX) G.oreRes[i]=Math.min(ORE_MAX,G.oreRes[i]+dt/150);
-    else if (M.gold[i] && G.oreRes[i]<GOLD_MAX) G.oreRes[i]=Math.min(GOLD_MAX,G.oreRes[i]+dt/220);
   }
 }
 const covOf = s => cov[s];
@@ -3761,7 +3769,7 @@ function renderPanel(force){
         <div class="sec"><h4>Produktion alle ${d.time} s</h4><div class="row"><span class="l" style="flex-wrap:wrap">${io}</span></div>
         ${b.t==='holzfaeller'?`<p class="note">${b.trees||0} schlagreife Bäume in Reichweite, voll ausgelastet ab 8. Ein Förster pflanzt nach.</p>`:''}
         ${b.t==='fischer'?`<p class="note">Fischbestand im Umkreis: ${pct(fishLevel(b))}. Er erholt sich, wenn weniger gefischt wird.</p>`:''}
-        ${b.t==='erzmine'||b.t==='goldmine'?`<p class="note">Vorkommen in Reichweite: ${Math.floor(reserveOf(b))} Einheiten. Es wächst nur langsam nach.</p>`:''}
+        ${b.t==='erzmine'||b.t==='goldmine'?`<p class="note">Vorkommen in Reichweite: ${Math.floor(reserveOf(b))} Einheiten.${b.refill!=null?` Erschöpft: In ${Math.max(1,Math.ceil(b.refill/60))} Minuten ist es wieder voll.`:' Ist es erschöpft, ruht die Mine 10 Minuten und ist danach wieder voll.'}</p>`:''}
         ${b.fire>0?'<p class="note" style="color:var(--bad)">Das Gebäude brennt!</p>':''}
         ${!b.conn?'<p class="note">Baue eine Straße von diesem Betrieb bis zu einem Kontor oder Markthaus.</p>':''}</div>
         <div class="sec"><div class="btns"><button class="btn" data-act="toggle" type="button">${b.on?'Anhalten':'Fortsetzen'}</button><button class="btn danger" data-act="demolish" type="button">${confirm?'Wirklich abreißen?':'Abreißen'}</button></div></div>`;
@@ -3945,7 +3953,7 @@ function showMenu(mode){
     <dt>Ziehen / rechte Taste</dt><dd>Karte verschieben. Auf dem Handy mit einem Finger, Zoom mit zwei.</dd>
     <dt>Mausrad, + / −</dt><dd>Zoomen</dd><dt>Leertaste, 1 · 2 · 3</dt><dd>Pause und Spieltempo</dd><dt>R · X · Esc</dt><dd>Straße · Abriss · Abbrechen</dd></dl>
     <div class="chain"><div>${icon('wolle')} Schaffarm → ${icon('stoff')} Weberei → ${icon('kleidung')} Schneiderei</div><div>${icon('getreide')} Getreidefarm → ${icon('mehl')} Mühle → ${icon('brot')} Bäckerei</div><div>${icon('hopfen')} Hopfengarten + ${icon('getreide')} Getreide → ${icon('bier')} Brauerei</div><div>${icon('holz')} Holz → ${icon('kohle')} Köhlerei · ${icon('erz')} Erz + Kohle → ${icon('eisen')} Erzschmelze → ${icon('werkzeug')} Werkzeugschmiede</div><div>${icon('ton')} Tongrube → ${icon('ziegel')} Ziegelei</div><div>${icon('rind')} Rinderfarm → ${icon('fleisch')} Metzgerei</div><div>${icon('trauben')} Weinberg → ${icon('wein')} Weinkelterei</div><div>${icon('golderz')} Goldmine → ${icon('schmuck')} Goldschmied</div></div>
-    <p class="note" style="margin-top:10px">Fünf Stufen: Pioniere wollen Fisch und einen Markt. Mit Kapelle werden sie Siedler (plus Stoff), mit Schule Bürger (plus Brot, Tee, Bier), mit Wirtshaus Kaufleute (plus Fleisch, Kleidung, Wein) und mit Theater Aristokraten (plus Schmuck). Für jeden Aufstieg brauchen die Häuser Baumaterial: Holz, Werkzeug, Stein, Ziegel und Eisen.</p><p class="note" style="margin-top:8px">Jede Insel hat ihr eigenes Lager. Waren bringst du mit Schiffen zwischen deinen Inseln hin und her, von Hand am Kontor oder über Handelsrouten. Wälder, Erzadern und Fischgründe sind endlich. Feuerwehr und Arzt schützen vor Bränden und Seuchen. Fehlt der Grundbedarf zu lange, steigen Häuser wieder ab. Steuern stellst du pro Stufe im Hausfenster ein, Technologien erforschst du in der Universität.</p></details>`;
+    <p class="note" style="margin-top:10px">Fünf Stufen: Pioniere wollen Fisch und einen Markt. Mit Kapelle werden sie Siedler (plus Stoff), mit Schule Bürger (plus Brot, Tee, Bier), mit Wirtshaus Kaufleute (plus Fleisch, Kleidung, Wein) und mit Theater Aristokraten (plus Schmuck). Für jeden Aufstieg brauchen die Häuser Baumaterial: Holz, Werkzeug, Stein, Ziegel und Eisen.</p><p class="note" style="margin-top:8px">Jede Insel hat ihr eigenes Lager. Waren bringst du mit Schiffen zwischen deinen Inseln hin und her, von Hand am Kontor oder über Handelsrouten. Wälder, Erzadern und Fischgründe sind endlich, eine leere Mine ist nach 10 Minuten Pause wieder voll. Feuerwehr und Arzt schützen vor Bränden und Seuchen. Fehlt der Grundbedarf zu lange, steigen Häuser wieder ab. Steuern stellst du pro Stufe im Hausfenster ein, Technologien erforschst du in der Universität.</p></details>`;
   if (mode==='win'){
     const mins=Math.round(G.t/60);
     card.innerHTML=`<p class="eyebrow">Ziel erreicht</p><h1>Hafenstadt</h1><p class="lede">Nach ${mins} Spielminuten leben ${fmt.format(G.pop)} Menschen in deiner Kolonie, davon ${fmt.format(G.popT[4]||0)} Aristokraten. Du kannst weiterbauen, so lange du willst.</p><div class="actions"><button class="btn primary" id="m-resume" type="button">Weiterspielen</button></div>`;
@@ -3993,7 +4001,7 @@ function serialize(){
   return { v:3, N, mv:G.map.ver||1, seed:G.seed, t:G.t, gold:G.gold, stores:G.stores, sup:G.sup, founded:G.founded, goal:G.goal, won:G.won, allowUp:G.allowUp,
     edits:[...G.treeEdits], saplings:[...G.saplings].map(([i,g])=>[i,+g.toFixed(2)]), ore, fish,
     roads:[...G.road.keys()].filter(i=>G.road[i]), tierSeen:G.tierSeen, unlocked:[...G.unlocked],
-    b:G.buildings.map(b=>[b.t,b.x,b.y,b.tier||0,+(b.res||0).toFixed(2),b.on?1:0,+b.prog.toFixed(2),b.out,b.hasIn?1:0,+(b.build??1).toFixed(3),+(b.fire||0).toFixed(1),+(b.sick||0).toFixed(1),b.shipT==null?null:+b.shipT.toFixed(1),b.shipType||null,lvlOf(b),b.upTo||null]),
+    b:G.buildings.map(b=>[b.t,b.x,b.y,b.tier||0,+(b.res||0).toFixed(2),b.on?1:0,+b.prog.toFixed(2),b.out,b.hasIn?1:0,+(b.build??1).toFixed(3),+(b.fire||0).toFixed(1),+(b.sick||0).toFixed(1),b.shipT==null?null:+b.shipT.toFixed(1),b.shipType||null,lvlOf(b),b.upTo||null,b.refill==null?null:Math.round(b.refill)]),
     ships:G.ships.map(s=>({ id:s.id, name:s.name, x:s.x, y:s.y, a:s.da, cap:s.cap, type:s.type, cargo:s.cargo, route:s.route })),
     techs:[...G.techs], rp:G.rp, taxLv:G.taxLv,
     events:G.events, nextEvent:G.nextEvent, trader:{tm:G.trader.st==='away'?G.trader.tm:120},
@@ -4009,7 +4017,7 @@ function restore(s){
   for (const [i,v] of s.fish||[]) g.fish[i]=v;
   for (const i of s.roads||[]) g.road[i]=1;
   G=g;
-  for (const [t,x,y,tier,res,on,prog,out,hasIn,bld,fire,sick,shipT,shipType,lvl,upTo] of s.b){ const b={ shipType:shipType||'kogge', lvl:Math.min(lvl||1,maxLvl(t)), upTo:upTo&&upTo<=maxLvl(t)?upTo:null, build:bld==null?1:bld, id:g.nextId++, t, x, y, prog:prog||0, out:out||0, hasIn:!!hasIn, on:!!on, eff:.5, st:'', conn:false, seed:(x*7+y*13)%97, fire:t==='haus'?fire||0:0, sick:sick||0, shipT:shipT==null?null:shipT }; if (t==='haus'){ b.tier=tier; b.res=res; b.happy=.7; b.upT=0; } addBuilding(b); }
+  for (const [t,x,y,tier,res,on,prog,out,hasIn,bld,fire,sick,shipT,shipType,lvl,upTo,refill] of s.b){ const b={ refill:refill??null, shipType:shipType||'kogge', lvl:Math.min(lvl||1,maxLvl(t)), upTo:upTo&&upTo<=maxLvl(t)?upTo:null, build:bld==null?1:bld, id:g.nextId++, t, x, y, prog:prog||0, out:out||0, hasIn:!!hasIn, on:!!on, eff:.5, st:'', conn:false, seed:(x*7+y*13)%97, fire:t==='haus'?fire||0:0, sick:sick||0, shipT:shipT==null?null:shipT }; if (t==='haus'){ b.tier=tier; b.res=res; b.happy=.7; b.upT=0; } addBuilding(b); }
   if (s.ships){
     g.ships=s.ships.map(o=>Object.assign(makeShip(o.id,o.name,o.x,o.y,o.cap,o.type||'kogge'),{ cargo:Object.assign(emptyGoods(),o.cargo), route:o.route||null, da:o.a||0, ang:o.a||0 }));
     g.nextShip=Math.max(0,...g.ships.map(o=>o.id))+1;
