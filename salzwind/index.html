@@ -488,7 +488,7 @@ function bfsDist(L, landVal, out){
 }
 
 // ============================================================ map generation v2: larger sea, climate zones, varied island shapes
-const MAP_N = 160, MAP_VER = 4, MIN_ISLE = 240;
+const MAP_N = 224, MAP_VER = 5, MIN_ISLE = 240;
 const isleSize = c => c.tiles.length<450 ? 'Kleine Insel' : c.tiles.length<800 ? 'Mittlere Insel' : 'Große Insel';
 const BIOMES = {
   gemaessigt:{ n:'Gemäßigt', warm:.5, code:0, tree:.5, conifer:.45 },
@@ -621,11 +621,72 @@ function genMapV3(seed,ver=3){
       const nl = r>=17 ? 1+Math.floor(rnd()*3) : rnd()<.45 ? 1 : 0;
       for (let k=0;k<nl;k++){ const a=rnd()*6.28, d=r*(.1+rnd()*.4); c.lakes.push({ x:x+Math.cos(a)*d, y:y+Math.sin(a)*d, r:1.3+rnd()*(r>=17?2.4:1.4) }); } }
     return c; };
-  const home=mk(N*.5+(rnd()-.5)*12, N*.5+(rnd()-.5)*12, 19, rnd()<.5?'round':'ellipse', 'gemaessigt'); home.lakes=home.lakes.slice(0,1); home.amp=.75; home.ax=Math.min(home.ax,1.45);
+  let home=mk(N*.5+(rnd()-.5)*12, N*.5+(rnd()-.5)*12, 19, rnd()<.5?'round':'ellipse', 'gemaessigt'); home.lakes=home.lakes.slice(0,1); home.amp=.75; home.ax=Math.min(home.ax,1.45);
   const C=[home], want=Math.round(22*(N*N)/(160*160));
   const TYPES=['round','ellipse','ellipse','crescent','atoll','cluster','jagged','jagged','peninsula','peninsula','horseshoe','twin','twin'];
   const reachOf=c=>c.r*(c.type==='ellipse'?1.6:c.type==='peninsula'?1.25:c.type==='twin'?1.15:1.05);
-  if (v4){
+  if (ver>=5){
+    // every map gets its own layout; several large islands, the home island can be anywhere
+    C.length=0;
+    const RR={ riesig:[30,38], gross:[17,23], mittel:[12.5,15.5], klein:[10.5,12.5] }, SMALLER={riesig:'gross',gross:'mittel',mittel:'klein'};
+    const T5=['round','ellipse','ellipse','crescent','atoll','jagged','jagged','peninsula','peninsula','horseshoe','twin'], BIGT=['ellipse','ellipse','jagged','peninsula','round','twin','horseshoe'];
+    const THIN={crescent:1.3,atoll:1.35,horseshoe:1.3,twin:1.15,peninsula:1.15};
+    const ca=rnd()*Math.PI*2, cdx=Math.cos(ca), cdy=Math.sin(ca);
+    const clim=(x,y)=>Math.max(0,Math.min(1,.5+((x-N/2)*cdx+(y-N/2)*cdy)/(N*.8)));
+    let zone=null;   // optional (x,y)=>bool: where filler islands may go
+    const parts=c=>c.big?c.subs.map(q=>({x:q.x,y:q.y,r:q.r*1.2})):[{x:c.x,y:c.y,r:reachOf(c)}];
+    const far=(o,c)=>parts(o).every(a=>parts(c).every(b=>Math.hypot(a.x-b.x,a.y-b.y)>a.r+b.r+3.5));
+    const put=(cls,px,py,spread,tries=400)=>{ for (let k=0;k<tries;k++){
+        if (k===Math.floor(tries*.6) && SMALLER[cls]) cls=SMALLER[cls];
+        const big=cls==='riesig'||cls==='gross', TT=big?BIGT:T5; let type=TT[Math.floor(rnd()*TT.length)]; if ((type==='atoll'||type==='horseshoe')&&cls==='klein') type='round';
+        const [a,b]=RR[cls], r=(a+rnd()*(b-a))*(THIN[type]||1);
+        const x = px==null ? 5+r+rnd()*(N-10-2*r) : px+(rnd()-.5)*2*spread, y = py==null ? 5+r+rnd()*(N-10-2*r) : py+(rnd()-.5)*2*spread;
+        if (x<5+r||y<5+r||x>N-5-r||y>N-5-r) continue;
+        if (px==null && zone && !zone(x,y)) continue;
+        const c=mk(x,y,r,type,pickBiome(clim(x,y))); c.cls=cls;
+        if (cls==='riesig'){ // a big irregular landmass of several merged lobes with bays between them
+          c.type='cluster'; c.big=true; c.amp=.55; c.subs=[]; const n=4+Math.floor(rnd()*3), a0=rnd()*6.28, st=.6+rnd()*.8;
+          for (let j=0;j<n;j++){ const a=a0+j*6.28/n*st+(rnd()-.5)*.8, d=r*(.18+rnd()*.42); c.subs.push({ x:x+Math.cos(a)*d, y:y+Math.sin(a)*d, r:r*(.42+rnd()*.24) }); }
+          c.subs.push({ x, y, r:r*.5 }); c.lakes=[]; for (let j=0;j<1+Math.floor(rnd()*3);j++){ const a=rnd()*6.28, d=r*rnd()*.35; c.lakes.push({ x:x+Math.cos(a)*d, y:y+Math.sin(a)*d, r:1.6+rnd()*2.6 }); } }
+        if (!C.every(o=>far(o,c))) continue;
+        C.push(c); return c; } return null; };
+    const LAYOUTS=['verstreut','grossinseln','kette','ring','festland','gruppen'], lay=LAYOUTS[Math.floor(rnd()*LAYOUTS.length)];
+    if (lay==='grossinseln'){ const n=2+Math.floor(rnd()*2), a0=rnd()*6.28; for (let k=0;k<n;k++){ const a=a0+k*6.28/n+(rnd()-.5)*.6, d=N*(.24+rnd()*.08); put('riesig',N/2+Math.cos(a)*d,N/2+Math.sin(a)*d,N*.06); } }
+    else if (lay==='kette'){ // islands strung along a curve across the map
+      const P=[[N*(.08+rnd()*.15),N*(.1+rnd()*.8)],[N*(.3+rnd()*.15),N*rnd()],[N*(.55+rnd()*.15),N*rnd()],[N*(.77+rnd()*.15),N*(.1+rnd()*.8)]];
+      if (rnd()<.5) for (const q of P) q.reverse();
+      const bz=t=>{ const u=1-t; return [0,1].map(i=>u*u*u*P[0][i]+3*u*u*t*P[1][i]+3*u*t*t*P[2][i]+t*t*t*P[3][i]); };
+      const curve=[]; for (let k=0;k<=40;k++) curve.push(bz(k/40));
+      const rk=1+Math.floor(rnd()*3); for (let k=0;k<=14;k++){ const [x,y]=bz(k/14); put(k===rk*4?'riesig':['gross','mittel','klein','mittel'][k%4],x,y,N*.05,300); }
+      zone=(x,y)=>curve.some(([cx,cy])=>Math.hypot(x-cx,y-cy)<N*.15); }
+    else if (lay==='ring'){ // an inner sea surrounded by islands
+      const rx=N*(.3+rnd()*.06), ry=N*(.26+rnd()*.08), a0=rnd()*6.28, n=9+Math.floor(rnd()*3);
+      for (let k=0;k<n;k++){ const a=a0+k*6.28/n; put(k%3===0?'gross':k%3===1?'mittel':rnd()<.5?'riesig':'gross',N/2+Math.cos(a)*rx,N/2+Math.sin(a)*ry,N*.035,200); }
+      if (rnd()<.5) put('klein',N/2,N/2,N*.05);
+      zone=(x,y)=>Math.hypot((x-N/2)/rx,(y-N/2)/ry)>.82; }
+    else if (lay==='festland'){ // a chain of very large islands along one edge
+      const side=Math.floor(rnd()*4), along=(t,d)=>side===0?[N*t,N*d]:side===1?[N*(1-d),N*t]:side===2?[N*t,N*(1-d)]:[N*d,N*t];
+      // one long landmass along the edge: overlapping lobes with bays, capes and an inland lake or two
+      const [mx,my]=along(.5,.15), land=mk(mx,my,N*.3,'cluster',pickBiome(clim(mx,my))); land.cls='riesig'; land.big=true; land.amp=.6; land.subs=[]; land.lakes=[];
+      const t0=.12+rnd()*.1, t1=.78+rnd()*.1;
+      for (let t=t0;t<=t1;t+=.05+rnd()*.03){ const d=.11+rnd()*.12, [x,y]=along(t,d); land.subs.push({ x, y, r:N*(.05+rnd()*.04) }); }
+      for (let j=0;j<2;j++){ const q=land.subs[1+Math.floor(rnd()*(land.subs.length-2))]; land.lakes.push({ x:q.x, y:q.y, r:1.8+rnd()*2.2 }); }
+      C.push(land);
+      const ex=side===1?N:side===3?0:null, ey=side===0?0:side===2?N:null; zone=(x,y)=>(ex==null||Math.abs(x-ex)>N*.38)&&(ey==null||Math.abs(y-ey)>N*.38); }
+    else if (lay==='gruppen'){ // separate archipelagos with open sea between them
+      const n=3+Math.floor(rnd()*2), a0=rnd()*6.28, G0=[];
+      for (let k=0;k<n;k++){ const a=a0+k*6.28/n+(rnd()-.5)*.5, d=N*(.28+rnd()*.07), gx=N/2+Math.cos(a)*d, gy=N/2+Math.sin(a)*d; G0.push([gx,gy]);
+        put(rnd()<.5?'riesig':'gross',gx,gy,N*.04); for (let j=0;j<6;j++) put(rnd()<.5?'mittel':'klein',gx,gy,N*.19,300); }
+      zone=(x,y)=>G0.some(([gx,gy])=>Math.hypot(x-gx,y-gy)<N*.24); }
+    else { const n=2+Math.floor(rnd()*2); for (let k=0;k<n;k++) put('riesig'); }
+    const sc=(N/160)**2*(.65+rnd()*.6), fill=[...Array(Math.round(2*sc)).fill('gross'),...Array(Math.round(3*sc)).fill('mittel'),...Array(Math.round(4.5*sc)).fill('klein')];
+    if (lay==='gruppen') fill.length=Math.round(fill.length*.5); else if (lay==='ring') fill.length=Math.round(fill.length*.45); else if (lay==='kette') fill.length=Math.round(fill.length*.8);
+    for (const cls of fill) put(cls,null,null,0,250);
+    if (lay==='kette'||lay==='gruppen'){ zone=null; for (let k=0;k<3;k++) put('klein',null,null,0,150); }
+    const cand=C.filter(c=>c.cls!=='klein' && !['atoll','horseshoe','crescent'].includes(c.type));
+    home=cand[Math.floor(rnd()*cand.length)]||C[0]; home.biome='gemaessigt'; home.lakes=home.lakes.slice(0,1);
+    C.layout=lay;
+  } else if (v4){
     // fixed mix of size classes, biggest first so they find room; thin shapes get a larger radius to reach the same area
     const plan=[...Array(3).fill('gross'),...Array(5).fill('mittel'),...Array(8).fill('klein')], SMALLER={gross:'mittel',mittel:'klein'}, RR={ gross:[16.5,20], mittel:[12.5,15], klein:[11,12.5] };
     const T4=['round','ellipse','ellipse','crescent','atoll','jagged','jagged','peninsula','peninsula','horseshoe','twin'], THIN={crescent:1.3,atoll:1.35,horseshoe:1.3,twin:1.15,peninsula:1.15};
@@ -683,6 +744,7 @@ function genMapV3(seed,ver=3){
   bfsDist(L,1,dist); bfsDist(L,0,wd);
   const hi=Math.round(home.y)*N+Math.round(home.x);
   let homeC = isl[hi]>=0 ? comps[isl[hi]] : comps.slice().sort((a,b)=>Math.hypot(a.cx-home.x,a.cy-home.y)-Math.hypot(b.cx-home.x,b.cy-home.y))[0];
+  if (ver>=5 && homeC.tiles.length<450){ const ok=comps.filter(c=>c.tiles.length>=450 && c.tiles.length<=2600); if (ok.length) homeC=ok[Math.floor(rnd()*ok.length)]; }
   homeC.biome='gemaessigt';
   const pools={}; for (const k in BIOME_NAMES) pools[k]=BIOME_NAMES[k].slice().sort(()=>rnd()-.5);
   const used=new Set();
@@ -745,7 +807,7 @@ function genMapV3(seed,ver=3){
     T[i] = dist[i]<=1 && fbm(x*.16,y*.16,seed+313)<c.rocky ? 3 : 4;
     if (T[i]===4 && dist[i]>=2 && fbm(x*.21,y*.21,seed+99)>BIOMES[c.biome].tree+c.treeAdj) tree[i]=1+Math.floor(hash2(x,y,seed+3)*200);
   }
-  return { seed, ver, T, isl, ore, gold, tree, shade, dist, wd, comps, home:homeC.id };
+  return { seed, ver, T, isl, ore, gold, tree, shade, dist, wd, comps, home:homeC.id, layout:C.layout||null };
 }
 // shared after-processing: nearest island for every tile (lets water near a coast take on that island's climate colours)
 function finishMap(M,ver){

@@ -70,7 +70,7 @@ Dann öffnet sich die Seite per Tippen im Vollbild, zeigt aber nichts direkt auf
 ## Salzwind (Spiel)
 
 Im Ordner [`salzwind/`](salzwind/index.html) liegt ein eigenständiges Insel-Aufbauspiel im Browser
-(eine einzige HTML-Datei, keine Abhängigkeiten) auf einer Karte mit 160 × 160 Feldern und kleinen, mittleren und großen Inseln in fünf Klimazonen: Mit dem Schiff Kontore gründen, Betriebe über
+(eine einzige HTML-Datei, keine Abhängigkeiten) auf einer Karte mit 224 × 224 Feldern, deren Inseln jedes Mal anders angeordnet sind (verstreut, Großinseln, Inselkette, Ring um ein Binnenmeer, Festland am Rand oder Inselgruppen), in fünf Klimazonen: Mit dem Schiff Kontore gründen, Betriebe über
 Straßen anbinden und 24 Waren in Produktionsketten herstellen, etwa Wolle → Stoff → Kleidung,
 Holz → Kohle und Erz → Eisen → Werkzeug, Ton → Ziegel, Hopfen → Bier, Trauben → Wein oder Gold → Schmuck.
 Die Bewohner steigen über fünf Stufen von Pionieren bis zu Aristokraten auf. Jede Insel hat ihr eigenes Lager; Schiffe bringen Waren von Hand oder über Handelsrouten zwischen den Inseln,
