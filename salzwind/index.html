@@ -320,7 +320,7 @@ const SVC_A = { kapelle:'einer Kapelle', schule:'einer Schule', wirtshaus:'einem
 const B = {
   strasse:{n:'Straße', s:1, cost:{gold:3}, up:0, desc:'Verbindet Betriebe mit Kontor, Markthaus oder Lagerhaus. Nur angeschlossene Betriebe liefern Waren ins Lager. Ziehen, um eine Strecke zu bauen.'},
   haus:{n:'Wohnhaus', s:1, cost:{holz:3}, up:0, desc:'Hier ziehen Pioniere ein. Sind ihre Wünsche erfüllt, steigen sie über Siedler und Bürger bis zu Aristokraten auf. Ziehen, um eine Fläche zu bebauen.'},
-  kontor:{n:'Kontor', s:2, cost:{gold:800, holz:10, werkzeug:5}, up:10, hub:true, influence:10, radius:8, desc:'Lager und Hafen einer Insel. Muss an der Küste stehen, höchstens 7 Felder von deinem Schiff entfernt. Dein erstes Kontor ist kostenlos.'},
+  kontor:{n:'Kontor', s:2, cost:{gold:800, holz:10, werkzeug:5}, up:10, hub:true, influence:10, radius:8, desc:'Lager und Hafen einer Insel. Muss mit einer ganzen Seite am Wasser liegen, höchstens 7 Felder von deinem Schiff entfernt. Dein erstes Kontor ist kostenlos.'},
   markt:{n:'Markthaus', s:2, cost:{gold:200, holz:6, werkzeug:2}, up:12, hub:true, influence:7, radius:8, unlock:{pop:25}, desc:'Versorgt Häuser im Umkreis, erweitert das Baugebiet und nimmt wie das Kontor Waren an.'},
   lager:{n:'Lagerhaus', s:2, cost:{gold:250, holz:8, werkzeug:2}, up:8, hub:true, store:40, unlock:{pop:60}, desc:'Nimmt Waren der angeschlossenen Betriebe an und erweitert das Lager um 40 je Ware. Erweitert nicht das Baugebiet.'},
   kapelle:{n:'Kapelle', s:1, cost:{gold:150, holz:4, werkzeug:1}, up:6, radius:7, svc:'kapelle', unlock:{pop:40}, desc:'Siedler wollen eine Kapelle in der Nähe. Pioniere steigen erst auf, wenn eine erreichbar ist.'},
@@ -330,7 +330,7 @@ const B = {
   kathedrale:{n:'Kathedrale', s:2, cost:{gold:6000, werkzeug:20, stein:40, ziegel:60}, up:50, unlock:{t:[4,100]}, desc:'Ein Prachtbau für deine Kolonie. Erhöht alle Steuereinnahmen um 10 %.'},
   feuerwehr:{n:'Feuerwehr', s:1, cost:{gold:300, holz:5, werkzeug:2}, up:8, radius:9, svc:'feuerwehr', unlock:{pop:60}, desc:'Löscht Brände im Umkreis von 9 Feldern, bevor Wohnhäuser abbrennen, und senkt die Brandgefahr dort. Brände gibt es erst, wenn die Feuerwehr gebaut werden kann.'},
   arzt:{n:'Arzt', s:1, cost:{gold:450, holz:4, werkzeug:2, ziegel:4}, up:12, radius:9, svc:'arzt', unlock:{t:[2,20]}, desc:'Heilt Seuchen im Umkreis von 9 Feldern schnell und verhindert, dass sie sich ausbreiten. Seuchen gibt es erst, wenn der Arzt gebaut werden kann.'},
-  werft:{n:'Werft', s:3, cost:{gold:600, holz:12, werkzeug:4}, up:10, unlock:{t:[1,30]}, desc:'Baut Handelsschiffe für Routen zwischen deinen Inseln. Belegt 3 × 3 Felder und muss direkt am Wasser stehen. Ein Schiff kostet 1.200 Gold, 30 Holz, 10 Stoff und 8 Werkzeug.'},
+  werft:{n:'Werft', s:3, cost:{gold:600, holz:12, werkzeug:4}, up:10, unlock:{t:[1,30]}, desc:'Baut Handelsschiffe für Routen zwischen deinen Inseln. Belegt 3 × 3 Felder und muss mit einer ganzen Seite am Wasser liegen. Ein Schiff kostet 1.200 Gold, 30 Holz, 10 Stoff und 8 Werkzeug.'},
   foerster:{n:'Förster', s:1, cost:{gold:60, holz:3}, up:3, unlock:{pop:15}, desc:'Pflanzt alle 12 Sekunden einen Baum auf freiem Grasland im Umkreis von 3 Feldern. Junge Bäume brauchen etwa anderthalb Minuten, bis man sie fällen kann.'},
   holzfaeller:{n:'Holzfäller', s:1, cost:{gold:50, holz:2}, up:3, out:'holz', time:12, desc:'Fällt Bäume im Umkreis von 3 Feldern. Mit 8 Bäumen in Reichweite arbeitet er voll. Der Wald wird dabei lichter, ein Förster pflanzt nach.'},
   fischer:{n:'Fischerhütte', s:1, cost:{gold:80, holz:3}, up:4, out:'fisch', time:10, desc:'Muss direkt am Wasser stehen. Fisch ist das Grundnahrungsmittel. Zu viele Fischer am selben Ufer fischen das Wasser leer.'},
@@ -932,7 +932,12 @@ function newState(seed, demo, ver=MAP_VER, n=MAP_N, diff=0){
     const sea=new Uint8Array(N*N), st=[0]; sea[0]=1;
     while (st.length){ const j=st.pop(), x=j%N, y=(j/N)|0; for (const [dx,dy] of D4){ const nx=x+dx, ny=y+dy; if (nx<0||ny<0||nx>=N||ny>=N) continue; const q=ny*N+nx; if (!sea[q] && map.T[q]<=2){ sea[q]=1; st.push(q); } } }
     const shore=home.tiles.filter(j=>map.dist[j]===1 && (map.T[j]===3||map.T[j]===4) && (()=>{ const x=j%N, y=(j/N)|0; for (const [dx,dy] of D4){ const q=(y+dy)*N+x+dx; if (sea[q]) return true; } return false; })());
-    for (let i=0;i<N*N;i++) if (sea[i] && hd[i]>=3 && hd[i]<=4){ const x=i%N, y=(i/N)|0; let n=0; for (const j of shore) if (Math.hypot((j%N)-x,((j/N)|0)-y)<=5.5) n++; if (n>=6) cand.push(i); }
+    // places where the first kontor fits: 2x2 land on the home island with a whole side on open sea
+    const spots=[], onHome=j=>map.isl[j]===map.home && (map.T[j]===3||map.T[j]===4);
+    for (const j of home.tiles){ const x=j%N, y=(j/N)|0; if (!(onHome(j)&&onHome(j+1)&&onHome(j+N)&&onHome(j+N+1))) continue;
+      for (const d of waterSides(x,y,2,map.T)){ const t=d===0?[x+2,y]:d===1?[x,y+2]:d===2?[x-1,y]:[x,y-1]; if (sea[t[1]*N+t[0]]){ spots.push([x+1,y+1]); break; } } }
+    for (let i=0;i<N*N;i++) if (sea[i] && hd[i]>=3 && hd[i]<=4){ const x=i%N, y=(i/N)|0; let n=0; for (const [sx,sy] of spots) if (Math.hypot(sx-x,sy-y)<=6) n++; if (n>=3) cand.push(i); }
+    if (!cand.length) for (let i=0;i<N*N;i++) if (sea[i] && hd[i]>=3 && hd[i]<=4){ const x=i%N, y=(i/N)|0; let n=0; for (const j of shore) if (Math.hypot((j%N)-x,((j/N)|0)-y)<=5.5) n++; if (n>=6) cand.push(i); }
   }
   if (!cand.length) for (let i=0;i<N*N;i++) if (map.T[i]<=2 && hd[i]>=3 && hd[i]<=4) cand.push(i);
   if (!cand.length) for (let i=0;i<N*N;i++) if (map.T[i]<=2) { cand.push(i); break; }
@@ -1018,6 +1023,10 @@ function recompute(){
 
 // ============================================================ placement
 const inB = (x,y) => x>=0 && y>=0 && x<N && y<N;
+// sides of an s×s footprint that touch water along their whole length: 0 = +x, 1 = +y, 2 = -x, 3 = -y
+function waterSides(x,y,s,T){ T=T||G.map.T; const out=[];
+  for (let d=0;d<4;d++){ let ok=true; for (let k=0;k<s && ok;k++){ const [sx,sy]=d===0?[x+s,y+k]:d===1?[x+k,y+s]:d===2?[x-1,y+k]:[x+k,y-1]; if (!inB(sx,sy) || T[sy*N+sx]>2) ok=false; } if (ok) out.push(d); }
+  return out; }
 function nearAny(x,y,s,pred){
   for (let yy=y-1; yy<=y+s; yy++) for (let xx=x-1; xx<=x+s; xx++){
     if (!inB(xx,yy) || (xx>=x&&xx<x+s&&yy>=y&&yy<y+s)) continue;
@@ -1047,7 +1056,7 @@ function canPlace(type,x,y){
     if (isle===-2) isle=M.isl[i]; else if (isle!==M.isl[i]) return { ok:false, why:'Muss auf einer Insel stehen.' };
   }
   if (type==='kontor'){
-    if (!nearAny(x,y,s,i=>M.T[i]<=2)) return { ok:false, why:'Ein Kontor muss direkt an der Küste stehen.' };
+    if (!waterSides(x,y,s).length) return { ok:false, why:'Ein Kontor muss mit einer ganzen Seite am Wasser liegen, nicht nur mit einer Ecke.' };
     if (G.buildings.some(b=>b.t==='kontor' && b.isl===isle)) return { ok:false, why:'Auf dieser Insel steht schon ein Kontor.' };
     const sh=kontorShip(x,y);
     if (!sh) return { ok:false, why:'Ein Schiff muss in der Nähe ankern (höchstens 7 Felder).' };
@@ -1058,7 +1067,8 @@ function canPlace(type,x,y){
     }
     return { ok:true, isle, ship:sh };
   }
-  if ((type==='fischer'||type==='tongrube'||type==='werft') && !nearAny(x,y,s,i=>M.T[i]<=2)) return { ok:false, why:`${d.n}: muss direkt am Wasser stehen.` };
+  if (type==='werft' && !waterSides(x,y,s).length) return { ok:false, why:'Die Werft muss mit einer ganzen Seite am Wasser liegen, nicht nur mit einer Ecke.' };
+  if ((type==='fischer'||type==='tongrube') && !nearAny(x,y,s,i=>M.T[i]<=2)) return { ok:false, why:`${d.n}: muss direkt am Wasser stehen.` };
   if (type==='steinbruch' && !nearAny(x,y,s,i=>M.T[i]===5)) return { ok:false, why:'Der Steinbruch muss an einen Berg grenzen.' };
   if (type==='erzmine' && !nearAny(x,y,s,i=>M.ore[i])) return { ok:false, why:'Hier gibt es kein Erzvorkommen. Suche rötlich gesprenkelte Berge.' };
   if (type==='goldmine' && !nearAny(x,y,s,i=>M.gold[i])) return { ok:false, why:'Hier gibt es kein Goldvorkommen. Suche golden funkelnde Berge.' };
@@ -1919,6 +1929,7 @@ function werft3Ship(c,cx,cy,lvl,dir,plank,t,act){
 }
 // water side of a 3x3 shipyard at x,y: the side with the most navigable tiles next to it
 function werftDirAt(x,y,sz=3){
+  const full=G&&G.map?waterSides(x,y,sz):[]; if (full.length) return full.includes(0)?0:full.includes(1)?1:full[0];
   const cnt=[0,0,0,0];
   for (let k=-1;k<=sz;k++) for (const dep of [0,1]){ const sides=[[x+sz+dep,y+k],[x+k,y+sz+dep],[x-1-dep,y+k],[x+k,y-1-dep]]; sides.forEach(([sx,sy],d)=>{ if (inB(sx,sy) && nav(sy*N+sx)) cnt[d]+=dep?1:2; }); }
   let best=0; for (let d=1;d<4;d++) if (cnt[d]>cnt[best] || (cnt[d]===cnt[best] && d<2 && best>=2)) best=d; return best;
