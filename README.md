@@ -77,5 +77,5 @@ Die Bewohner steigen über fünf Stufen von Pionieren bis zu Aristokraten auf. J
 eine Werft baut weitere Schiffe. Wälder, Erzadern und Fischgründe sind endlich (leere Minen sind nach 10 Minuten wieder voll), Brände, Seuchen, Stürme und
 Missernten fordern Feuerwehr und Arzt. Neue Ketten liefern Glas, Farbstoff, Möbel und Gewürze; Steuern lassen sich pro Stufe einstellen,
 Häuser steigen bei Mangel ab, Routen haben bis zu vier Häfen mit Mengenregeln, die Werft baut drei Schiffstypen
-und eine Universität erforscht Verbesserungen. Kontor und Werft lassen sich in drei Stufen ausbauen, andere Gebäude einmal. Mit GitHub Pages erreichbar unter
+und eine Universität erforscht Verbesserungen. Kontor und Werft lassen sich in drei Stufen ausbauen, andere Gebäude einmal. Fünf Schwierigkeitsgrade von „Siedler“ bis „Admiral“ verschärfen Kosten, Steuern, Verbrauch, Lager, Bauzeiten und Forschung; Schulden kosten Zinsen und können zum Bankrott führen. Mit GitHub Pages erreichbar unter
 `https://<user>.github.io/<repo>/salzwind/`. Spielstände werden im Browser gespeichert.
